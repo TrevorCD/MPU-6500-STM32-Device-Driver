@@ -33,7 +33,7 @@ typedef struct {
 	uint16_t gyro_yout;
 	uint16_t gyro_zout;
 
-} MPU_OutputTypeDef;
+} MPU6500_OutputTypeDef;
 
 typedef struct {
 
@@ -43,10 +43,11 @@ typedef struct {
 
 	uint8_t data_ready;
 	
-} MPU_HandleTypeDef;
+} MPU6500_HandleTypeDef;
 
 /* Public Prototypes */
-int MPU_Init(MPU_HandleTypeDef *dev);
-int MPU_GetAccel(MPU_HandleTypeDef *dev, MPU_OutputTypeDef *out);
-int MPU_GetGyro(MPU_HandleTypeDef *dev, MPU_OutputTypeDef *out);
-int MPU_GetTemp(MPU_HandleTypeDef *dev, MPU_OutputTypeDef *out);
+int MPU6500_Init(MPU6500_HandleTypeDef *dev);
+int MPU6500_GetAccel(MPU6500_HandleTypeDef *dev, MPU6500_OutputTypeDef *out);
+int MPU6500_GetGyro(MPU6500_HandleTypeDef *dev, MPU6500_OutputTypeDef *out);
+int MPU6500_GetTemp(MPU6500_HandleTypeDef *dev, MPU6500_OutputTypeDef *out);
+int MPU6500_DataReady(MPU6500_HandleTypeDef *dev);
