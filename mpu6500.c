@@ -197,8 +197,8 @@ int MPU6500_GetTemp(MPU6500_HandleTypeDef *dev, MPU6500_OutputTypeDef *out);
 int MPU6500_DataReady(MPU6500_HandleTypeDef *dev);
 
 /* Private Prototypes --------------------------------------------------------*/
-static int MPU6500_Read(MPU6500_HandleTypeDef *dev, uint8_t *data);
-static int MPU6500_Write(MPU6500_HandleTypeDef *dev, uint8_t data);
+static int MPU6500_Read(MPU6500_HandleTypeDef *dev, uint8_t reg, uint8_t *data);
+static int MPU6500_Write(MPU6500_HandleTypeDef *dev, uint8_t reg, uint8_t data);
 
 /* Public Functions ----------------------------------------------------------*/
 
