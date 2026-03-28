@@ -206,17 +206,14 @@ int MPU6500_Init(MPU6500_HandleTypeDef *dev) {
 
 	HAL_StatusTypeDef status;
 
+	if(dev == NULL) return -1;
 	if(dev->initialized != 0) return -1;
 	
 	status = HAL_I2C_IsDeviceReady(dev->hi2c, MPU6500_SLAVE_ADDR, 3, 50);
-	if(status != HAL_OK) {
-		return -1;
-	}
+	if(status != HAL_OK) return -1;
 
 	/* Enable raw data ready interrupts (MPU6500_INT_ENABLE[bit 0] == 1) */
-	if(MPU6500_Write(dev, MPU6500_INT_ENABLE, 1) != 0) {
-		return -1;
-	}
+	if(MPU6500_Write(dev, MPU6500_INT_ENABLE, 1) != 0) return -1;
 
 	///
 	
@@ -231,7 +228,8 @@ int MPU6500_GetAccel(MPU6500_HandleTypeDef *dev, MPU6500_OutputTypeDef *out) {
 
 	uint8_t high, low;
 	uint16_t x, y, z;
-	
+
+	if(dev == NULL) return -1;
 	if(dev->initialized != 1) return -1;
 	if(out == NULL) return -1;
 	
@@ -260,7 +258,8 @@ int MPU6500_GetGyro(MPU6500_HandleTypeDef *dev, MPU6500_OutputTypeDef *out) {
 
 	uint8_t high, low;
 	uint16_t x, y, z;
-	
+
+	if(dev == NULL) return -1;
 	if(dev->initialized != 1) return -1;
 	if(out == NULL) return -1;
 	
@@ -288,7 +287,8 @@ int MPU6500_GetGyro(MPU6500_HandleTypeDef *dev, MPU6500_OutputTypeDef *out) {
 int MPU6500_GetTemp(MPU6500_HandleTypeDef *dev, MPU6500_OutputTypeDef *out) {
 
 	uint8_t high, low;
-	
+
+	if(dev == NULL) return -1;
 	if(dev->initialized != 1) return -1;
 	if(out == NULL) return -1;
 
@@ -305,6 +305,7 @@ int MPU6500_GetTemp(MPU6500_HandleTypeDef *dev, MPU6500_OutputTypeDef *out) {
 /* returns 1 on data ready, 0 on not ready, -1 on failure */
 int MPU6500_DataReady(MPU6500_HandleTypeDef *dev) {
 	uint8_t data;
+	if(dev == NULL) return -1;
 	if(MPU6500_Read(dev, MPU6500_INT_STATUS, &data) != 0) return -1;
 	if(data & 1) return 1;
 	return 0;
@@ -313,10 +314,12 @@ int MPU6500_DataReady(MPU6500_HandleTypeDef *dev) {
 /* Private Functions ---------------------------------------------------------*/
 
 static int MPU6500_Read(MPU6500_HandleTypeDef *dev, uint8_t reg, uint8_t *data){
-	if(HAL_I2C_Mem_Read(dev->hi2c, MPU6500_SLAVE_ADDR, reg, 1, data, 1,
-						MPU6500_READ_TIMEOUT) != HAL_OK) {
-		return -1;
-	}
+	HAL_StatusTypeDef status;
+	if(dev == NULL) return -1;
+	if(data == NULL) return -1;
+	status = HAL_I2C_Mem_Read(dev->hi2c, MPU6500_SLAVE_ADDR, reg, 1, data, 1,
+							  MPU6500_READ_TIMEOUT);
+	if(status != HAL_OK) return -1;
 	return 0;
 }
 
@@ -325,11 +328,10 @@ static int MPU6500_Read(MPU6500_HandleTypeDef *dev, uint8_t reg, uint8_t *data){
 static int MPU6500_Write(MPU6500_HandleTypeDef *dev, uint8_t reg, uint8_t data){
 	HAL_StatusTypeDef status;
 	uint8_t msg[2] = {reg, data};
+	if(dev == NULL) return -1;
 	status = HAL_I2C_Master_Transmit(dev->hi2c, MPU6500_SLAVE_ADDR,
 									 msg, 2, 1000);
-	if(status != HAL_OK) {
-		return -1;
-	}
+	if(status != HAL_OK) return -1;
 	return 0;
 }
 
