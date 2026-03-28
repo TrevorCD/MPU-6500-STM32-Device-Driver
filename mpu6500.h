@@ -24,15 +24,29 @@
 #include "stm32f4xx.h"
 #include "stm32f4xx_hal.h"
 
+typedef struct {
+	uint16_t accel_xout;
+	uint16_t accel_yout;
+	uint16_t accel_zout;
+	uint16_t temp_out;
+	uint16_t gyro_xout;
+	uint16_t gyro_yout;
+	uint16_t gyro_zout;
+
+} MPU_OutputTypeDef;
 
 typedef struct {
 
 	I2C_HandleTypeDef *hi2c;
+	
+	uint32_t initialized;
 
-} MPU6500_HandleTypeDef;
+	uint8_t data_ready;
+	
+} MPU_HandleTypeDef;
 
 /* Public Prototypes */
 int MPU_Init(MPU_HandleTypeDef *dev);
-int MPU_Read(MPU_HandleTypeDef *dev, uint8_t *data);
-int MPU_Write(MPU_HandleTypeDef *dev, uint8_t *data);
-int MPU_Ioctl(MPU_HandleTypeDef *dev, uint8_t *data, uint8_t type);
+int MPU_GetAccel(MPU_HandleTypeDef *dev, MPU_OutputTypeDef *out);
+int MPU_GetGyro(MPU_HandleTypeDef *dev, MPU_OutputTypeDef *out);
+int MPU_GetTemp(MPU_HandleTypeDef *dev, MPU_OutputTypeDef *out);

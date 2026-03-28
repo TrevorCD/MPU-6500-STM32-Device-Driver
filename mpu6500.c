@@ -179,58 +179,131 @@
 
 /* Public Prototypes ---------------------------------------------------------*/
 int MPU_Init(MPU_HandleTypeDef *dev);
-int MPU_Read(MPU_HandleTypeDef *dev, uint8_t *data);
-int MPU_Write(MPU_HandleTypeDef *dev, uint8_t *data);
-int MPU_Ioctl(MPU_HandleTypeDef *dev, uint8_t *data, uint8_t type);
+int MPU_GetAccel(MPU_HandleTypeDef *dev, MPU_OutputTypeDef *out);
+int MPU_GetGyro(MPU_HandleTypeDef *dev, MPU_OutputTypeDef *out);
+int MPU_GetTemp(MPU_HandleTypeDef *dev, MPU_OutputTypeDef *out);
 
 /* Private Prototypes --------------------------------------------------------*/
-static int MPU_Read(MPU_HandleTypeDef *dev, uint8_t reg, uint8_t *data);
-static int MPU_Transmit(MPU_HandleTypeDef *dev, uint8_t reg, uint8_t data);
+static int MPU_Read(MPU_HandleTypeDef *dev, uint8_t *data);
+static int MPU_Write(MPU_HandleTypeDef *dev, uint8_t *data);
 
 /* Public Functions ----------------------------------------------------------*/
 
 int MPU_Init(MPU_HandleTypeDef *dev) {
 
+	HAL_StatusTypeDef status;
+
+	if(dev->initialized != 0) return -1;
+	
+	status = HAL_I2C_IsDeviceReady(dev->hi2c, SLAVE_ADDR, 3, 50);
+	if(status != HAL_OK) {
+		return -1;
+	}
+
+	/* Enable raw data ready interrupts (MPU_INT_ENABLE[bit 0] == 1) */
+	if(MPU_Write(dev, MPU_INT_ENABLE, 1) != 0) {
+		return -1;
+	}
+
+	///
+	
+	dev->initialized = 1;
+	
 	return 0;
 }
 
 /*----------------------------------------------------------------------------*/
 
-int MPU_Read(MPU_HandleTypeDef *dev, uint8_t *data) {
+int MPU_GetAccel(MPU_HandleTypeDef *dev, MPU_OutputTypeDef *out) {
 
+	uint8_t high, low;
+	uint16_t x, y, z;
+	
+	if(dev->initialized != 1) return -1;
+	if(out == NULL) return -1;
+	
+	if(MPU_Read(dev, MPU_ACCEL_XOUT_H, &high) != 0) return -1;
+	if(MPU_Read(dev, MPU_ACCEL_XOUT_L, &low) != 0) return -1;
+	x = ((uint16_t)low) | (((uint16_t)high) << 8);
+	
+	if(MPU_Read(dev, MPU_ACCEL_YOUT_H, &high) != 0) return -1;
+	if(MPU_Read(dev, MPU_ACCEL_YOUT_L, &low) != 0) return -1;
+	y = ((uint16_t)low) | (((uint16_t)high) << 8);
+	
+	if(MPU_Read(dev, MPU_ACCEL_ZOUT_H, &high) != 0) return -1;
+	if(MPU_Read(dev, MPU_ACCEL_ZOUT_L, &low) != 0) return -1;
+	z = ((uint16_t)low) | (((uint16_t)high) << 8);
+
+	out->accel_xout = x;
+	out->accel_yout = y;
+	out->accel_zout = z;
+	
 	return 0;
 }
 
 /*----------------------------------------------------------------------------*/
 
-int MPU_Write(MPU_HandleTypeDef *dev, uint8_t *data) {
+int MPU_GetGyro(MPU_HandleTypeDef *dev, MPU_OutputTypeDef *out) {
 
+	uint8_t high, low;
+	uint16_t x, y, z;
+	
+	if(dev->initialized != 1) return -1;
+	if(out == NULL) return -1;
+	
+	if(MPU_Read(dev, MPU_GYRO_XOUT_H, &high) != 0) return -1;
+	if(MPU_Read(dev, MPU_GYRO_XOUT_L, &low) != 0) return -1;
+	x = ((uint16_t)low) | (((uint16_t)high) << 8);
+	
+	if(MPU_Read(dev, MPU_GYRO_YOUT_H, &high) != 0) return -1;
+	if(MPU_Read(dev, MPU_GYRO_YOUT_L, &low) != 0) return -1;
+	y = ((uint16_t)low) | (((uint16_t)high) << 8);
+	
+	if(MPU_Read(dev, MPU_GYRO_ZOUT_H, &high) != 0) return -1;
+	if(MPU_Read(dev, MPU_GYRO_ZOUT_L, &low) != 0) return -1;
+	z = ((uint16_t)low) | (((uint16_t)high) << 8);
+
+	out->gyro_xout = x;
+	out->gyro_yout = y;
+	out->gyro_zout = z;
+	
 	return 0;
 }
 
 /*----------------------------------------------------------------------------*/
 
-int MPU_Ioctl(MPU_HandleTypeDef *dev, uint8_t *data, uint8_t type) {
+int MPU_GetTemp(MPU_HandleTypeDef *dev, MPU_OutputTypeDef *out) {
 
+	uint8_t high, low;
+	
+	if(dev->initialized != 1) return -1;
+	if(out == NULL) return -1;
+
+	if(MPU_Read(dev, MPU_TEMP_OUT_H, &high) != 0) return -1;
+	if(MPU_Read(dev, MPU_TEMP_OUT_L, &low) != 0) return -1;
+
+	out->temp_out = ((uint16_t)low) | (((uint16_t)high) << 8);
+	
 	return 0;
 }
-
 
 /* Private Functions ---------------------------------------------------------*/
 
-static int MPU_Transmit(MPU_HandleTypeDef *dev, uint8_t reg, uint8_t data) {
-	HAL_StatusTypeDef status;
-	uint8_t msg[2] = {reg, data};
-	status = HAL_I2C_Master_Transmit(dev->hi2c, SLAVE_ADDR, msg, 2, 1000);
-	if(status != HAL_OK) {
+static int MPU_Read(MPU_HandleTypeDef *dev, uint8_t reg, uint8_t *data) {
+	if(HAL_I2C_Mem_Read(dev->hi2c, SLAVE_ADDR, reg, 1, data, 1, READ_TIMEOUT)
+	   != HAL_OK) {
 		return -1;
 	}
 	return 0;
 }
 
-static int MPU_Read(MPU_HandleTypeDef *dev, uint8_t reg, uint8_t *data) {
-	if(HAL_I2C_Mem_Read(dev->hi2c, SLAVE_ADDR, reg, 1, data, 1, READ_TIMEOUT)
-	   != HAL_OK) {
+/*----------------------------------------------------------------------------*/
+
+static int MPU_Write(MPU_HandleTypeDef *dev, uint8_t reg, uint8_t data) {
+	HAL_StatusTypeDef status;
+	uint8_t msg[2] = {reg, data};
+	status = HAL_I2C_Master_Transmit(dev->hi2c, SLAVE_ADDR, msg, 2, 1000);
+	if(status != HAL_OK) {
 		return -1;
 	}
 	return 0;
