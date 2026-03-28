@@ -29,7 +29,7 @@
 
 /* MPU-6500 Config -----------------------------------------------------------*/
 #define MPU6500_AD0_TIED_LOW       (1)    /* Tie low for lower slave address */
-#define MPU6500_READ_TIMEOUT           (1000) /* timeout for i2c read in ms */
+#define MPU6500_READ_TIMEOUT       (1000) /* timeout for i2c read in ms */
 
 /* MPU-6500 Registers --------------------------------------------------------*/
 #define MPU6500_SELF_TEST_X_GYRO   (0x00)
@@ -46,34 +46,34 @@
 #define MPU6500_ZG_OFFSET_L        (0x18) /* Z_OFFS_USR        [7:0]  */
 #define MPU6500_SMPLRT_DIV         (0x19)
 #define MPU6500_CONFIG             (0x1A) /* FIFO_MODE         [6]
-										 EXT_SYNC_SET      [4:3]
-										 DLPF_CFG          [2:0]  */
+											 EXT_SYNC_SET      [4:3]
+											 DLPF_CFG          [2:0]  */
 #define MPU6500_GYRO_CONFIG        (0x1B) /* XG_ST             [7]
-										 YG_ST             [6]
-										 ZG_ST             [5]
-										 GYRO_FS_SEL       [4:3]
-										 FCHOICE_B         [1:0]  */
+											 YG_ST             [6]
+											 ZG_ST             [5]
+											 GYRO_FS_SEL       [4:3]
+											 FCHOICE_B         [1:0]  */
 #define MPU6500_ACCEL_CONFIG       (0x1C) /* XA_ST             [7]
-										 YA_ST             [6]
-										 ZA_ST             [5]
-										 ACCEL_FS_SEL      [4:3]  */
+											 YA_ST             [6]
+											 ZA_ST             [5]
+											 ACCEL_FS_SEL      [4:3]  */
 #define MPU6500_ACCEL_CONFIG2      (0x1D) /* ACCEL_FC_HOICE_B  [3]
-										 A_DLPF_CFG        [2:0]  */
+											 A_DLPF_CFG        [2:0]  */
 #define MPU6500_LP_ACCEL_ODR       (0x1E) /* LPOSC_CLKSEL      [3:0]  */
 #define MPU6500_WOM_THR            (0x1F)
 #define MPU6500_FIFO_EN            (0x23) /* TEMP_FIFO_EN      [7]
-										 GYRO_XOUT         [6]
-										 GYRO_YOUT         [5]
-										 GYRO_ZOUT         [4]
-										 ACCEL             [3]
-										 SLV2              [2]
-										 SLV1              [1]
-										 SLV0              [0]    */
+											 GYRO_XOUT         [6]
+											 GYRO_YOUT         [5]
+											 GYRO_ZOUT         [4]
+											 ACCEL             [3]
+											 SLV2              [2]
+											 SLV1              [1]
+											 SLV0              [0]    */
 #define MPU6500_I2C_MST_CTRL       (0x24) /* MULT_MST_EN       [7]
-										 WAIT_FOR_ES       [6]
-										 SLV3_FIFO_EN      [5]
-										 I2C_MST_P_NSR     [4]
-										 I2C_MST_CLK       [3:0]  */
+											 WAIT_FOR_ES       [6]
+											 SLV3_FIFO_EN      [5]
+											 I2C_MST_P_NSR     [4]
+											 I2C_MST_CLK       [3:0]  */
 #define MPU6500_I2C_SLV0_ADDR      (0x25)
 #define MPU6500_I2C_SLV0_REG       (0x26)
 #define MPU6500_I2C_SLV0_CTRL      (0x27)
@@ -83,21 +83,21 @@
 /* ... more I2C addrs ...*/
 #define MPU6500_I2C_MST_STATUS     (0x36)
 #define MPU6500_INT_PIN_CFG        (0x27) /* ACTL              [7]
-										 OPEN              [6]
-										 LATCH_INT_EN      [5]
-										 INT_ANYRD_2CLEAR  [4]
-										 ACTL_FSY_EN       [3]
-										 FSYNC_INT_MODE_EN [2]
-										 BYPASS_EN         [1]    */
+											 OPEN              [6]
+											 LATCH_INT_EN      [5]
+											 INT_ANYRD_2CLEAR  [4]
+											 ACTL_FSY_EN       [3]
+											 FSYNC_INT_MODE_EN [2]
+											 BYPASS_EN         [1]    */
 #define MPU6500_INT_ENABLE         (0x38) /* WOM_EN            [6]
-										 FIFO_OFLOW_EN     [4]
-										 FSYNC_INT_EN      [3]
-										 RAW_RDY_EN        [0]    */
+											 FIFO_OFLOW_EN     [4]
+											 FSYNC_INT_EN      [3]
+											 RAW_RDY_EN        [0]    */
 #define MPU6500_INT_STATUS         (0x3A) /* WOM_INT           [6]
-										 FIFO_OFLOW_INT    [4]
-										 FSYNC_INT         [3]
-										 DMP_INT           [1]
-										 RAW_DATA_RDY_INT  [0]    */
+											 FIFO_OFLOW_INT    [4]
+											 FSYNC_INT         [3]
+											 DMP_INT           [1]
+											 RAW_DATA_RDY_INT  [0]    */
 #define MPU6500_ACCEL_XOUT_H       (0x3B)
 #define MPU6500_ACCEL_XOUT_L       (0x3C)
 #define MPU6500_ACCEL_YOUT_H       (0x3D)
@@ -141,36 +141,36 @@
 #define MPU6500_I2C_SLV2_DO        (0x65)
 #define MPU6500_I2C_SLV3_DO        (0x66)
 #define MPU6500_I2C_MST_DELAY_CTRL (0x67) /* DELAY_ES_SHADOW   [7]
-										 I2C_SLV4_DLY_EN   [4]
-										 I2C_SLV3_DLY_EN   [3]
-										 I2C_SLV2_DLY_EN   [2]
-										 I2C_SLV1_DLY_EN   [1]
-										 I2C_SLV0_DLY_EN   [0]    */
+											 I2C_SLV4_DLY_EN   [4]
+											 I2C_SLV3_DLY_EN   [3]
+											 I2C_SLV2_DLY_EN   [2]
+											 I2C_SLV1_DLY_EN   [1]
+											 I2C_SLV0_DLY_EN   [0]    */
 #define MPU6500_SIGNAL_PATH_REST   (0x68) /* GYRO_RST          [2]
-										 ACCEL_RST         [1]
-										 TEMP_RST          [0]    */
+											 ACCEL_RST         [1]
+											 TEMP_RST          [0]    */
 #define MPU6500_ACCEL_INTEL_CTRL   (0x69) /* ACCEL_INT_EL_EN   [7]
-										 ACCEL_INT_EL_MODE [6]    */
+											 ACCEL_INT_EL_MODE [6]    */
 #define MPU6500_USER_CTRL          (0x6A) /* DMP_EN            [7]
-										 FIFO_EN           [6]
-										 I2C_MST_EN        [5]
-										 I2C_IF_DIS        [4]
-										 DMP_RST           [3]
-										 FIFO_RST          [2]
-										 I2C_MST_RST       [1]
-										 SIG_COND_RST      [0]    */
+											 FIFO_EN           [6]
+											 I2C_MST_EN        [5]
+											 I2C_IF_DIS        [4]
+											 DMP_RST           [3]
+											 FIFO_RST          [2]
+											 I2C_MST_RST       [1]
+											 SIG_COND_RST      [0]    */
 #define MPU6500_PWR_MGMT_1         (0x6B) /* DEVICE_RESET      [7]
-										 SLEEP             [6]
-										 CYCLE             [5]
-										 GYRO_STANDBY      [4]
-										 TEMP_DIS          [3]
-										 CLKSEL            [2:0]  */
+											 SLEEP             [6]
+											 CYCLE             [5]
+											 GYRO_STANDBY      [4]
+											 TEMP_DIS          [3]
+											 CLKSEL            [2:0]  */
 #define MPU6500_PWR_MGMT_2         (0x6C) /* DIS_XA            [5]
-										 DIS_YA            [4]
-										 DIS_ZA            [3]
-										 DIS_XG            [2]
-										 DIS_YG            [1]
-										 DIS_ZG            [0]    */
+											 DIS_YA            [4]
+											 DIS_ZA            [3]
+											 DIS_XG            [2]
+											 DIS_YG            [1]
+											 DIS_ZG            [0]    */
 #define MPU6500_FIFO_COUNT_H       (0x72) /* FIFO_CNT[12:8]    [4:0]  */
 #define MPU6500_FIFO_COUNT_L       (0x73) /* FIFO_CNT[7:0]     [7:0]  */
 #define MPU6500_FIFO_R_W           (0x74)
@@ -183,9 +183,9 @@
 #define MPU6500_ZA_OFFSET_L        (0x7E)
 
 #if MPU6500_AD0_TIED_LOW
-#define MPU6500_SLAVE_ADDR             (0b1101000)
+#define MPU6500_SLAVE_ADDR         (0b1101000)
 #else
-#define MPU6500_SLAVE_ADDR             (0b1101001)
+#define MPU6500_SLAVE_ADDR         (0b1101001)
 #endif
 
 
