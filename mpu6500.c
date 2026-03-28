@@ -183,9 +183,9 @@
 #define MPU6500_ZA_OFFSET_L        (0x7E)
 
 #if MPU6500_AD0_TIED_LOW
-#define SLAVE_ADDR             (0b1101000)
+#define MPU6500_SLAVE_ADDR             (0b1101000)
 #else
-#define SLAVE_ADDR             (0b1101001)
+#define MPU6500_SLAVE_ADDR             (0b1101001)
 #endif
 
 
@@ -208,7 +208,7 @@ int MPU6500_Init(MPU6500_HandleTypeDef *dev) {
 
 	if(dev->initialized != 0) return -1;
 	
-	status = HAL_I2C_IsDeviceReady(dev->hi2c, SLAVE_ADDR, 3, 50);
+	status = HAL_I2C_IsDeviceReady(dev->hi2c, MPU6500_SLAVE_ADDR, 3, 50);
 	if(status != HAL_OK) {
 		return -1;
 	}
@@ -313,7 +313,7 @@ int MPU6500_DataReady(MPU6500_HandleTypeDef *dev) {
 /* Private Functions ---------------------------------------------------------*/
 
 static int MPU6500_Read(MPU6500_HandleTypeDef *dev, uint8_t reg, uint8_t *data){
-	if(HAL_I2C_Mem_Read(dev->hi2c, SLAVE_ADDR, reg, 1, data, 1,
+	if(HAL_I2C_Mem_Read(dev->hi2c, MPU6500_SLAVE_ADDR, reg, 1, data, 1,
 						MPU6500_READ_TIMEOUT) != HAL_OK) {
 		return -1;
 	}
@@ -325,7 +325,8 @@ static int MPU6500_Read(MPU6500_HandleTypeDef *dev, uint8_t reg, uint8_t *data){
 static int MPU6500_Write(MPU6500_HandleTypeDef *dev, uint8_t reg, uint8_t data){
 	HAL_StatusTypeDef status;
 	uint8_t msg[2] = {reg, data};
-	status = HAL_I2C_Master_Transmit(dev->hi2c, SLAVE_ADDR, msg, 2, 1000);
+	status = HAL_I2C_Master_Transmit(dev->hi2c, MPU6500_SLAVE_ADDR,
+									 msg, 2, 1000);
 	if(status != HAL_OK) {
 		return -1;
 	}
