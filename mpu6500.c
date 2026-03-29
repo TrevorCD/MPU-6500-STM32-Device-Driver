@@ -183,9 +183,9 @@
 #define MPU6500_ZA_OFFSET_L        (0x7E)
 
 #if MPU6500_AD0_TIED_LOW
-#define MPU6500_SLAVE_ADDR         (0b1101000)
+#define MPU6500_SLAVE_ADDR         (0b1101000 << 1)
 #else
-#define MPU6500_SLAVE_ADDR         (0b1101001)
+#define MPU6500_SLAVE_ADDR         (0b1101001 << 1)
 #endif
 
 
@@ -214,6 +214,9 @@ int MPU6500_Init(MPU6500_HandleTypeDef *dev) {
 
 	/* Wake up and set clock source to PLL */
 	if(MPU6500_Write(dev, MPU6500_PWR_MGMT_1, 0x01) != 0) return -1; 
+
+	/* Check whoami */
+	
 	
 	/* Enable raw data ready interrupts (MPU6500_INT_ENABLE[bit 0] == 1) */
 	if(MPU6500_Write(dev, MPU6500_INT_ENABLE, 1) != 0) return -1;
