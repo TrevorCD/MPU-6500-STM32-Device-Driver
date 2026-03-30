@@ -28,7 +28,7 @@
 #include "mpu6500.h"
 
 /* MPU-6500 Config -----------------------------------------------------------*/
-#define MPU6500_AD0_TIED_LOW       (1)    /* Tie low for lower slave address */
+#define MPU6500_AD0_TIED_LOW       1      /* Tie low for lower slave address */
 #define MPU6500_READ_TIMEOUT       (1000) /* timeout for i2c read in ms */
 
 /* MPU-6500 Registers --------------------------------------------------------*/
@@ -208,8 +208,9 @@ int MPU6500_Init(MPU6500_HandleTypeDef *dev) {
 
 	if(dev == NULL) return -1;
 	if(dev->initialized != 0) return -1;
+	if(dev->hi2c == NULL) return -1;
 	
-	status = HAL_I2C_IsDeviceReady(dev->hi2c, MPU6500_SLAVE_ADDR, 3, 50);
+	status = HAL_I2C_IsDeviceReady(dev->hi2c, MPU6500_SLAVE_ADDR, 10, 500);
 	if(status != HAL_OK) return -1;
 
 	/* Wake up and set clock source to PLL */
