@@ -334,7 +334,7 @@ int MPU6500_SetAccelScale(MPU6500_HandleTypeDef *dev, uint8_t selection) {
 int MPU6500_GetAccel(MPU6500_HandleTypeDef *dev, MPU6500_OutputTypeDef *out) {
 
 	uint8_t high, low;
-	uint16_t x, y, z;
+	int16_t x, y, z;
 
 	if(dev == NULL) return -1;
 	if(dev->initialized != 1) return -1;
@@ -389,7 +389,7 @@ int MPU6500_SetGyroScale(MPU6500_HandleTypeDef *dev, uint8_t selection) {
 int MPU6500_GetGyro(MPU6500_HandleTypeDef *dev, MPU6500_OutputTypeDef *out) {
 
 	uint8_t high, low;
-	uint16_t x, y, z;
+	int16_t x, y, z;
 
 	if(dev == NULL) return -1;
 	if(dev->initialized != 1) return -1;
