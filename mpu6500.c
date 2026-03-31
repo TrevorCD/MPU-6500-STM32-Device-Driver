@@ -232,7 +232,7 @@ int MPU6500_EnableInterrupts(MPU6500_HandleTypeDef *dev) {
 int MPU6500_DisableInterrupts(MPU6500_HandleTypeDef *dev) {
 	if(dev == NULL) return -1;
 	if(dev->initialized != 1) return -1;
-	/* Enable raw data ready interrupts (MPU6500_INT_ENABLE[bit 0] == 1) */
+	/* Disable all interrupts */
 	if(MPU6500_Write(dev, MPU6500_INT_ENABLE, 0) != 0) return -1;
 	return 0;
 }
