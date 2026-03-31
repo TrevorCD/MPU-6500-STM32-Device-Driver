@@ -212,12 +212,17 @@ int MPU6500_Init(MPU6500_HandleTypeDef *dev) {
 	
 	status = HAL_I2C_IsDeviceReady(dev->hi2c, MPU6500_SLAVE_ADDR, 10, 500);
 	if(status != HAL_OK) return -1;
+	
+	/* Check whoami */
+	uint8_t id = 0;
+	if(MPU6500_Read(dev, MPU6500_WHO_AM_I, &id) != 0) return -1;
+	if(id != 0x70) {
+		/* This is not an MPU-6500! */
+		return -1;
+	}
 
 	/* Wake up and set clock source to PLL */
 	if(MPU6500_Write(dev, MPU6500_PWR_MGMT_1, 0x01) != 0) return -1; 
-
-	/* Check whoami */
-	
 	
 	/* Enable raw data ready interrupts (MPU6500_INT_ENABLE[bit 0] == 1) */
 	if(MPU6500_Write(dev, MPU6500_INT_ENABLE, 1) != 0) return -1;
