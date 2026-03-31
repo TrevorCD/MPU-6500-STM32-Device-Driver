@@ -212,7 +212,7 @@ int MPU6500_Init(MPU6500_HandleTypeDef *dev) {
 	/* driver state initialization */
 	dev->initialized = 1;
 	dev->gyro_config = 0; /* defaults to 0 */
-	dev->accel_fs_sel = 0; /* defaults to 0 */
+	dev->accel_config = 0; /* defaults to 0 */
 	dev->sample_rate_div = 0; /* defaults to 0 */
 	dev->dlpf_cfg = 4; /* set to 4 above */
 	dev->pwr_mgmt_1 = 1; /* 0x01 on reset */
@@ -299,12 +299,13 @@ int MPU6500_SetSampleRateDiv(MPU6500_HandleTypeDef *dev, uint8_t div) {
 
 	/* If either of these conditions are true, SMPLRT_DIV register is not used
 	   to calculate internal sample rate */
-	if(dev->fchoice_b != 0) return -1;
+	/* gyro_config[1:0] is fchoice_b */
+	if((dev->gyro_config & 0b11) != 0) return -1;
 	if(dev->dlpf_cfg == 0 || dev->dlpf_cfg > 6) return -1;
 
 	if(dev->sample_rate_div == div) return 0;
 
-	if(MPU_Write(dev, MPU6500_SMPLRT_DIV, div) != 0) return -1;
+	if(MPU6500_Write(dev, MPU6500_SMPLRT_DIV, div) != 0) return -1;
 
 	dev->sample_rate_div = div;
 	return 0;
@@ -338,10 +339,11 @@ int MPU6500_GetAccel(MPU6500_HandleTypeDef *dev, MPU6500_OutputTypeDef *out) {
 	if(dev == NULL) return -1;
 	if(dev->initialized != 1) return -1;
 	if(out == NULL) return -1;
-	
-	if(dev->accel_fs_sel > 3) return -1; /* FS_SEL options are 0, 1, 2, 3 */
+
+	/* accel_fs_sel is accel_config[4:3] */
+	uint8_t accel_fs_sel = (dev->accel_config & 0b11000) >> 3;
 	const float sensitivity_scale[] = { 16384.0f, 8192.0f, 4096.0f, 2048.0f };
-	float accel_sensitivity = sensitivity_scale[dev->accel_fs_sel];
+	float accel_sensitivity = sensitivity_scale[accel_fs_sel];
 	
 	if(MPU6500_Read(dev, MPU6500_ACCEL_XOUT_H, &high) != 0) return -1;
 	if(MPU6500_Read(dev, MPU6500_ACCEL_XOUT_L, &low) != 0) return -1;
@@ -393,9 +395,10 @@ int MPU6500_GetGyro(MPU6500_HandleTypeDef *dev, MPU6500_OutputTypeDef *out) {
 	if(dev->initialized != 1) return -1;
 	if(out == NULL) return -1;
 
-	if(dev->gyro_fs_sel > 3) return -1; /* FS_SEL options are 0, 1, 2, 3 */
+	/* gyro_fs_sel is gyro_config[4:3] */
+	uint8_t gyro_fs_sel = (dev->gyro_config & 0b11000) >> 3;
 	const float sensitivity_scale[] = { 131.0f, 65.5f, 32.8f, 16.4f };
-	float gyro_sensitivity = sensitivity_scale[dev->gyro_fs_sel];
+	float gyro_sensitivity = sensitivity_scale[gyro_fs_sel];
 	
 	if(MPU6500_Read(dev, MPU6500_GYRO_XOUT_H, &high) != 0) return -1;
 	if(MPU6500_Read(dev, MPU6500_GYRO_XOUT_L, &low) != 0) return -1;
