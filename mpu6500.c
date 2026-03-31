@@ -32,9 +32,7 @@
 #define MPU6500_READ_TIMEOUT       (1000) /* timeout for i2c read in ms */
 
 /* MPU-6500 Constants --------------------------------------------------------*/
-#define ROOM_TEMP_OFFSET           (0.0f) /* Set to 0 for this driver.
-											 Ideally, another sensor calculates
-											 this value */
+#define ROOM_TEMP_OFFSET           (0.0f)
 #define TEMP_SENSITIVITY           (333.87f)
 
 /* MPU-6500 Registers --------------------------------------------------------*/
@@ -75,7 +73,7 @@
 											 SLV2              [2]
 											 SLV1              [1]
 											 SLV0              [0]    */
-#define MPU6500_INT_PIN_CFG        (0x27) /* ACTL              [7]
+#define MPU6500_INT_PIN_CFG        (0x37) /* ACTL              [7]
 											 OPEN              [6]
 											 LATCH_INT_EN      [5]
 											 INT_ANYRD_2CLEAR  [4]
@@ -118,12 +116,20 @@
 											 FIFO_RST          [2]
 											 I2C_MST_RST       [1]
 											 SIG_COND_RST      [0]    */
+/*----------------------------------------------------------------------------*/
 #define MPU6500_PWR_MGMT_1         (0x6B) /* DEVICE_RESET      [7]
 											 SLEEP             [6]
 											 CYCLE             [5]
 											 GYRO_STANDBY      [4]
 											 TEMP_DIS          [3]
 											 CLKSEL            [2:0]  */
+/* PWR_MGMT_1 Bits: */
+#define MPU6500_DEVICE_RESET       (0x80)
+#define MPU6500_SLEEP              (0x40)
+#define MPU6500_CYCLE              (0x20)
+#define MPU6500_GYRO_STANDBY       (0x10)
+#define MPU6500_TEMP_DIS           (0x08)
+/*----------------------------------------------------------------------------*/
 #define MPU6500_PWR_MGMT_2         (0x6C) /* DIS_XA            [5]
 											 DIS_YA            [4]
 											 DIS_ZA            [3]
@@ -149,10 +155,13 @@
 
 
 /* Public Prototypes ---------------------------------------------------------*/
-int MPU6500_Init(MPU6500_HandleTypeDef *dev);
-int MPU6500_GetAccel(MPU6500_HandleTypeDef *dev, MPU6500_OutputTypeDef *out);
-int MPU6500_GetGyro(MPU6500_HandleTypeDef *dev, MPU6500_OutputTypeDef *out);
-int MPU6500_GetTemp(MPU6500_HandleTypeDef *dev, MPU6500_OutputTypeDef *out);
+int  MPU6500_Init(MPU6500_HandleTypeDef *dev);
+int  MPU6500_SetSampleRateDiv(MPU6500_HandleTypeDef *dev, uint8_t div);
+int  MPU6500_SetAccelScale(MPU6500_HandleTypeDef *dev, uint8_t selection);
+int  MPU6500_GetAccel(MPU6500_HandleTypeDef *dev, MPU6500_OutputTypeDef *out);
+int  MPU6500_SetGyroScale(MPU6500_HandleTypeDef *dev, uint8_t selection);
+int  MPU6500_GetGyro(MPU6500_HandleTypeDef *dev, MPU6500_OutputTypeDef *out);
+int  MPU6500_GetTemp(MPU6500_HandleTypeDef *dev, MPU6500_OutputTypeDef *out);
 void MPU6500_IntCallback(MPU6500_HandleTypeDef * dev);
 
 /* Private Prototypes --------------------------------------------------------*/
@@ -161,6 +170,18 @@ static int MPU6500_Write(MPU6500_HandleTypeDef *dev, uint8_t reg, uint8_t data);
 
 /* Public Functions ----------------------------------------------------------*/
 
+/* MPU-6500 Initialization
+ *
+ * Prerequisites:
+ * - dev must be allocated and zeroed
+ * - hi2c field must be set
+ *
+ * Initializes device context, checks if device responds, checks if device is a
+ * BME-6000, and resets device.
+ *
+ * Note: On init, device is awake, using PLL, does not generate interrupts, has
+ *       a sample rate of 1kHz, and the digital low pass filter set to 4.
+ */
 int MPU6500_Init(MPU6500_HandleTypeDef *dev) {
 
 	HAL_StatusTypeDef status;
@@ -172,7 +193,7 @@ int MPU6500_Init(MPU6500_HandleTypeDef *dev) {
 	status = HAL_I2C_IsDeviceReady(dev->hi2c, MPU6500_SLAVE_ADDR, 10, 500);
 	if(status != HAL_OK) return -1;
 	
-	/* Check whoami */
+	/* Ensure this is an MPU-6500 */
 	uint8_t id = 0;
 	if(MPU6500_Read(dev, MPU6500_WHO_AM_I, &id) != 0) return -1;
 	if(id != 0x70) {
@@ -180,18 +201,132 @@ int MPU6500_Init(MPU6500_HandleTypeDef *dev) {
 		return -1;
 	}
 
-	/* Wake up and set clock source to PLL */
-	if(MPU6500_Write(dev, MPU6500_PWR_MGMT_1, 0x01) != 0) return -1; 
+	/* Device reset */
+	if(MPU6500_Write(dev, MPU6500_PWR_MGMT_1, MPU6500_DEVICE_RESET) != 0)
+		return -1;
+
+	/* Set DLPF_CFG to 4. This sets internal sample rate to 1kHz, with a 9.9ms
+	   delay. This is a medium digital low pass filter. */
+	if(MPU6500_Write(dev, MPU6500_CONFIG, 4) != 0) return -1;
 	
-	/* Enable raw data ready interrupts (MPU6500_INT_ENABLE[bit 0] == 1) */
-	if(MPU6500_Write(dev, MPU6500_INT_ENABLE, 1) != 0) return -1;
-	
+	/* driver state initialization */
 	dev->initialized = 1;
-	
+	dev->gyro_fs_sel = 0; /* defaults to 0 */
+	dev->accel_fs_sel = 0; /* defaults to 0 */
+	dev->sample_rate_div = 0; /* defaults to 0 */
+	dev->dlpf_cfg = 4; /* set to 4 above */
+	dev->fchoice_b = 0;
+	dev->pwr_mgmt_1 = 1; /* 0x01 on reset */
 	return 0;
 }
 
 /*----------------------------------------------------------------------------*/
+
+int MPU6500_EnableInterrupts(MPU6500_HandleTypeDef *dev) {
+	if(dev == NULL) return -1;
+	if(dev->initialized != 1) return -1;
+	/* Enable raw data ready interrupts (MPU6500_INT_ENABLE[bit 0] == 1) */
+	if(MPU6500_Write(dev, MPU6500_INT_ENABLE, 1) != 0) return -1;
+	return 0;
+}
+
+int MPU6500_DisableInterrupts(MPU6500_HandleTypeDef *dev) {
+	if(dev == NULL) return -1;
+	if(dev->initialized != 1) return -1;
+	/* Enable raw data ready interrupts (MPU6500_INT_ENABLE[bit 0] == 1) */
+	if(MPU6500_Write(dev, MPU6500_INT_ENABLE, 0) != 0) return -1;
+	return 0;
+}
+
+/* MPU6500 Interrupt Callback:
+ *
+ * Hook this into HAL_GPIO_EXTI_Callback() for the GPIO pin INT is connected to.
+ *
+ * Sets data_ready in the device context to 1.
+ *
+ * The code that handles reading data from the MPU6500 (after the interrupt)
+ * must handle setting data_ready back to 0.
+ *
+ * This function fails silently!!!
+ */
+inline void MPU6500_IntCallback(MPU6500_HandleTypeDef *dev) {
+	
+	uint8_t int_status = 0;
+	if(dev == NULL) return;
+	if(dev->initialized != 1) return;
+	/* Interrupt is cleared when INT_STATUS register is read */
+	/* If INT_PIN_CFG[4] (INT_ANYRD_2CLEAR) is 1, any read clears interrupt */
+	if(MPU6500_Read(dev, MPU6500_INT_STATUS, &int_status) == 0) {
+		/// this switch statement may be a bad idea if multiple bits can be on
+		switch(int_status) {
+		case 1:
+			dev->data_ready = 1;
+			break;
+		default:
+			break;
+		}
+	}
+}
+
+/* Power Management ----------------------------------------------------------*/
+
+int MPU6500_Awake(MPU6500_HandleTypeDef *dev) {
+	if(dev == NULL) return -1;
+	if(dev->initialized != 1) return -1;
+	/* Set sleep bit and cycle bit of PWR_MGMT_1 to 0 */
+	dev->pwr_mgmt_1 &= ~(MPU6500_SLEEP | MPU6500_CYCLE);
+	if(MPU6500_Write(dev, MPU6500_PWR_MGMT_1, dev->pwr_mgmt_1) != 0) return -1; 
+	return 0;
+}
+
+int MPU6500_Sleep(MPU6500_HandleTypeDef *dev) {
+	if(dev == NULL) return -1;
+	if(dev->initialized != 1) return -1;
+	/* Set sleep bit of PWR_MGMT_1 to 1 */
+	dev->pwr_mgmt_1 |= 0x40;
+	if(MPU6500_Write(dev, MPU6500_PWR_MGMT_1, dev->pwr_mgmt_1) != 0) return -1; 
+	return 0;
+}
+
+/*----------------------------------------------------------------------------*/
+
+/* Sets the sample rate where sample rate = 1kHz / ( 1 + div )
+ * This is only effective when FCHOICE_B = 0b00 and 0 < DLPF_CFG < 7
+ */
+int MPU6500_SetSampleRateDiv(MPU6500_HandleTypeDef *dev, uint8_t div) {
+	
+	if(dev == NULL) return -1;
+	if(dev->initialized != 1) return -1;
+
+	/* If either of these conditions are true, SMPLRT_DIV register is not used
+	   to calculate internal sample rate */
+	if(dev->fchoice_b != 0) return -1;
+	if(dev->dlpf_cfg == 0 || dev->dlpf_cfg > 6) return -1;
+
+	if(dev->sample_rate_div == div) return 0;
+
+	if(MPU_Write(dev, MPU6500_SMPLRT_DIV, div) != 0) return -1;
+
+	dev->sample_rate_div = div;
+	return 0;
+}
+
+/*----------------------------------------------------------------------------*/
+
+int MPU6500_SetAccelScale(MPU6500_HandleTypeDef *dev, uint8_t selection) {
+
+	if(dev == NULL) return -1;
+	if(dev->initialized != 1) return -1;
+
+	if(selection > 3) return -1; /* Options: 0, 1, 2, 3 */
+	
+	if(dev->accel_fs_sel == selection) return 0;
+
+	/* ACCEL_FS_SEL is ACCEL_CONFIG[4:3] */
+	if(MPU6500_Write(dev, MPU6500_ACCEL_CONFIG, selection << 3) != 0) return -1;
+
+	return 0;
+}
 
 int MPU6500_GetAccel(MPU6500_HandleTypeDef *dev, MPU6500_OutputTypeDef *out) {
 
@@ -201,6 +336,10 @@ int MPU6500_GetAccel(MPU6500_HandleTypeDef *dev, MPU6500_OutputTypeDef *out) {
 	if(dev == NULL) return -1;
 	if(dev->initialized != 1) return -1;
 	if(out == NULL) return -1;
+	
+	if(dev->accel_fs_sel > 3) return -1; /* FS_SEL options are 0, 1, 2, 3 */
+	const float sensitivity_scale[] = { 16384.0f, 8192.0f, 4096.0f, 2048.0f };
+	float accel_sensitivity = sensitivity_scale[dev->accel_fs_sel];
 	
 	if(MPU6500_Read(dev, MPU6500_ACCEL_XOUT_H, &high) != 0) return -1;
 	if(MPU6500_Read(dev, MPU6500_ACCEL_XOUT_L, &low) != 0) return -1;
@@ -214,16 +353,32 @@ int MPU6500_GetAccel(MPU6500_HandleTypeDef *dev, MPU6500_OutputTypeDef *out) {
 	if(MPU6500_Read(dev, MPU6500_ACCEL_ZOUT_L, &low) != 0) return -1;
 	z = ((uint16_t)low) | (((uint16_t)high) << 8);
 
-	out->accel_xout = x;
-	out->accel_yout = y;
-	out->accel_zout = z;
+	out->accel_xout = ((float) x) / accel_sensitivity;
+	out->accel_yout = ((float) y) / accel_sensitivity;
+	out->accel_zout = ((float) z) / accel_sensitivity;
 
-	/// must do raw -> actual calculations for x y and z
-	
 	return 0;
 }
 
 /*----------------------------------------------------------------------------*/
+
+/* Sets the gyroscope's full scale.
+   Note: Sets the rest of GYRO_CONFIG register to 0
+*/
+int MPU6500_SetGyroScale(MPU6500_HandleTypeDef *dev, uint8_t selection) {
+
+	if(dev == NULL) return -1;
+	if(dev->initialized != 1) return 01;
+	
+	if(selection > 3) return -1; /* Options: 0, 1, 2, 3 */
+	
+	if(dev->gyro_fs_sel == selection) return 0;
+
+    /* GYRO_FS_SEL is GYRO_CONFIG[4:3] */
+	if(MPU6500_Write(dev, MPU6500_GYRO_CONFIG, selection << 3) != 0) return -1;
+
+	return 0;
+}
 
 int MPU6500_GetGyro(MPU6500_HandleTypeDef *dev, MPU6500_OutputTypeDef *out) {
 
@@ -233,6 +388,10 @@ int MPU6500_GetGyro(MPU6500_HandleTypeDef *dev, MPU6500_OutputTypeDef *out) {
 	if(dev == NULL) return -1;
 	if(dev->initialized != 1) return -1;
 	if(out == NULL) return -1;
+
+	if(dev->gyro_fs_sel > 3) return -1; /* FS_SEL options are 0, 1, 2, 3 */
+	const float sensitivity_scale[] = { 131.0f, 65.5f, 32.8f, 16.4f };
+	float gyro_sensitivity = sensitivity_scale[dev->gyro_fs_sel];
 	
 	if(MPU6500_Read(dev, MPU6500_GYRO_XOUT_H, &high) != 0) return -1;
 	if(MPU6500_Read(dev, MPU6500_GYRO_XOUT_L, &low) != 0) return -1;
@@ -246,11 +405,9 @@ int MPU6500_GetGyro(MPU6500_HandleTypeDef *dev, MPU6500_OutputTypeDef *out) {
 	if(MPU6500_Read(dev, MPU6500_GYRO_ZOUT_L, &low) != 0) return -1;
 	z = ((uint16_t)low) | (((uint16_t)high) << 8);
 
-	out->gyro_xout = x;
-	out->gyro_yout = y;
-	out->gyro_zout = z;
-
-	/// must do raw -> actual calculations for x y and z
+	out->gyro_xout = ((float) x) / gyro_sensitivity;
+	out->gyro_yout = ((float) y) / gyro_sensitivity;
+	out->gyro_zout = ((float) z) / gyro_sensitivity;
 	
 	return 0;
 }
@@ -272,35 +429,12 @@ int MPU6500_GetTemp(MPU6500_HandleTypeDef *dev, MPU6500_OutputTypeDef *out) {
 
 	float temp_degC = ((temp_raw - ROOM_TEMP_OFFSET) / TEMP_SENSITIVITY) + 21;
 
-	dev->temp_out = temp_degC;
+	out->temp_out = temp_degC;
 	
 	return 0;
 }
 
 /*----------------------------------------------------------------------------*/
-
-/* MPU6500 Interrupt Callback:
- *
- * Hook this into HAL_GPIO_EXTI_Callback() for the GPIO pin INT is connected to.
- *
- * Sets data_ready in the device context to 1.
- *
- * The code that handles reading data from the MPU6500 (after the interrupt)
- * must handle setting data_ready back to 0.
- *
- * This function fails silently!!!
- */
-inline void MPU6500_IntCallback(MPU6500_HandleTypeDef *dev) {
-	/*
-	uint8_t int_status = 0;
-	if(MPU6500_Read(dev, MPU6500_INT_STATUS, &int_status) == 0) {
-		if(int_status & 1) {
-			dev->data_ready = 1;
-		}
-	}
-	*/
-	dev->data_ready = 1;
-}
 
 /* Private Functions ---------------------------------------------------------*/
 

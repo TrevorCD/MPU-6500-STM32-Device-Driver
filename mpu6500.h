@@ -25,13 +25,13 @@
 #include "stm32f4xx_hal.h"
 
 typedef struct {
-	uint16_t accel_xout;
-	uint16_t accel_yout;
-	uint16_t accel_zout;
-	uint16_t temp_out;
-	uint16_t gyro_xout;
-	uint16_t gyro_yout;
-	uint16_t gyro_zout;
+	float accel_xout;
+	float accel_yout;
+	float accel_zout;
+	float temp_out;
+	float gyro_xout;
+	float gyro_yout;
+	float gyro_zout;
 
 } MPU6500_OutputTypeDef;
 
@@ -42,12 +42,37 @@ typedef struct {
 	uint32_t initialized;
 
 	volatile uint8_t data_ready; /* set to 1 by IntCallback. Must be set back to
-									0 by whatever handles reading new data */
+									0 by whatever handles reading new data. */
+	uint8_t gyro_fs_sel; /* Gyroscope full scale select. Update by writing to
+							GYRO_CONFIG register. */
+	uint8_t fchoice_b;       /* Filter bypass. Defaults to 0. */
+	
+	uint8_t accel_fs_sel; /* Accelerometer full scale select. Update by writing
+							 to ACCEL_CONFIG register */
+	uint8_t sample_rate_div; /* The value of SMPLRT_DIV. Defaults to 0.
+								Internal sample rate = 1kHz/(1+sample_rate_div)
+								when fchoice_b = 0b00 and 0 < dlpf_cfg < 7. */
+	uint8_t dlpf_cfg;        /* Digital low pass filter config.
+								Initialized to 4. */
+	uint8_t pwr_mgmt_1; /* 0x01 (Awake, PLL) on reset */
 } MPU6500_HandleTypeDef;
 
 /* Public Prototypes */
-int MPU6500_Init(MPU6500_HandleTypeDef *dev);
-int MPU6500_GetAccel(MPU6500_HandleTypeDef *dev, MPU6500_OutputTypeDef *out);
-int MPU6500_GetGyro(MPU6500_HandleTypeDef *dev, MPU6500_OutputTypeDef *out);
-int MPU6500_GetTemp(MPU6500_HandleTypeDef *dev, MPU6500_OutputTypeDef *out);
+int  MPU6500_Init(MPU6500_HandleTypeDef *dev);
+
+int  MPU6500_EnableInterrupts(MPU6500_HandleTypeDef *dev);
+int  MPU6500_DisableInterrupts(MPU6500_HandleTypeDef *dev);
 void MPU6500_IntCallback(MPU6500_HandleTypeDef * dev);
+
+int  MPU6500_Awake(MPU6500_HandleTypeDef *dev);
+int  MPU6500_Sleep(MPU6500_HandleTypeDef *dev);
+
+int  MPU6500_SetSampleRateDiv(MPU6500_HandleTypeDef *dev, uint8_t div);
+
+int  MPU6500_SetAccelScale(MPU6500_HandleTypeDef *dev, uint8_t selection);
+int  MPU6500_GetAccel(MPU6500_HandleTypeDef *dev, MPU6500_OutputTypeDef *out);
+
+int  MPU6500_SetGyroScale(MPU6500_HandleTypeDef *dev, uint8_t selection);
+int  MPU6500_GetGyro(MPU6500_HandleTypeDef *dev, MPU6500_OutputTypeDef *out);
+
+int  MPU6500_GetTemp(MPU6500_HandleTypeDef *dev, MPU6500_OutputTypeDef *out);
