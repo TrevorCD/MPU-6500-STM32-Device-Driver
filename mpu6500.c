@@ -200,14 +200,18 @@ int MPU6500_Init(MPU6500_HandleTypeDef *dev) {
 		/* This is not an MPU-6500! */
 		return -1;
 	}
-
+	
 	/* Device reset */
 	if(MPU6500_Write(dev, MPU6500_PWR_MGMT_1, MPU6500_DEVICE_RESET) != 0)
 		return -1;
 
+	/* Give the device some time... */
+	HAL_Delay(100);
+	
 	/* Set DLPF_CFG to 4. This sets internal sample rate to 1kHz, with a 9.9ms
 	   delay. This is a medium digital low pass filter. */
 	if(MPU6500_Write(dev, MPU6500_CONFIG, 4) != 0) return -1;
+	HAL_Delay(10);
 	
 	/* driver state initialization */
 	dev->initialized = 1;
