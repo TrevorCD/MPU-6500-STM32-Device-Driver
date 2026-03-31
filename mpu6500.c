@@ -219,7 +219,7 @@ int MPU6500_Init(MPU6500_HandleTypeDef *dev) {
 	return 0;
 }
 
-/*----------------------------------------------------------------------------*/
+/* Interrupt Management and Callback -----------------------------------------*/
 
 int MPU6500_EnableInterrupts(MPU6500_HandleTypeDef *dev) {
 	if(dev == NULL) return -1;
@@ -311,7 +311,7 @@ int MPU6500_SetSampleRateDiv(MPU6500_HandleTypeDef *dev, uint8_t div) {
 	return 0;
 }
 
-/*----------------------------------------------------------------------------*/
+/* Accelerometer Functions ---------------------------------------------------*/
 
 int MPU6500_SetAccelScale(MPU6500_HandleTypeDef *dev, uint8_t selection) {
 
@@ -364,7 +364,7 @@ int MPU6500_GetAccel(MPU6500_HandleTypeDef *dev, MPU6500_OutputTypeDef *out) {
 	return 0;
 }
 
-/*----------------------------------------------------------------------------*/
+/* Gyroscope Functions -------------------------------------------------------*/
 
 /* Sets the gyroscope's scale.
 */
@@ -419,7 +419,7 @@ int MPU6500_GetGyro(MPU6500_HandleTypeDef *dev, MPU6500_OutputTypeDef *out) {
 	return 0;
 }
 
-/*----------------------------------------------------------------------------*/
+/* Temperature Functions -----------------------------------------------------*/
 
 int MPU6500_GetTemp(MPU6500_HandleTypeDef *dev, MPU6500_OutputTypeDef *out) {
 
@@ -441,8 +441,6 @@ int MPU6500_GetTemp(MPU6500_HandleTypeDef *dev, MPU6500_OutputTypeDef *out) {
 	return 0;
 }
 
-/*----------------------------------------------------------------------------*/
-
 /* Private Functions ---------------------------------------------------------*/
 
 static int MPU6500_Read(MPU6500_HandleTypeDef *dev, uint8_t reg, uint8_t *data){
@@ -454,8 +452,6 @@ static int MPU6500_Read(MPU6500_HandleTypeDef *dev, uint8_t reg, uint8_t *data){
 	return 0;
 }
 
-/*----------------------------------------------------------------------------*/
-
 static int MPU6500_Write(MPU6500_HandleTypeDef *dev, uint8_t reg, uint8_t data){
 	HAL_StatusTypeDef status;
 	uint8_t msg[2] = {reg, data};
@@ -464,5 +460,3 @@ static int MPU6500_Write(MPU6500_HandleTypeDef *dev, uint8_t reg, uint8_t data){
 	if(status != HAL_OK) return -1;
 	return 0;
 }
-
-
