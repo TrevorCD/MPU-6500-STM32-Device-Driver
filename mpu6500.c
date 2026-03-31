@@ -194,7 +194,7 @@ int MPU6500_Init(MPU6500_HandleTypeDef *dev);
 int MPU6500_GetAccel(MPU6500_HandleTypeDef *dev, MPU6500_OutputTypeDef *out);
 int MPU6500_GetGyro(MPU6500_HandleTypeDef *dev, MPU6500_OutputTypeDef *out);
 int MPU6500_GetTemp(MPU6500_HandleTypeDef *dev, MPU6500_OutputTypeDef *out);
-int MPU6500_DataReady(MPU6500_HandleTypeDef *dev);
+void MPU6500_IntCallback(MPU6500_HandleTypeDef * dev);
 
 /* Private Prototypes --------------------------------------------------------*/
 static int MPU6500_Read(MPU6500_HandleTypeDef *dev, uint8_t reg, uint8_t *data);
@@ -307,14 +307,27 @@ int MPU6500_GetTemp(MPU6500_HandleTypeDef *dev, MPU6500_OutputTypeDef *out) {
 
 /*----------------------------------------------------------------------------*/
 
-/* returns 1 on data ready, 0 on not ready, -1 on failure */
-int MPU6500_DataReady(MPU6500_HandleTypeDef *dev) {
-	uint8_t data;
-	if(dev == NULL) return -1;
-	if(dev->initialized != 1) return -1;
-	if(MPU6500_Read(dev, MPU6500_INT_STATUS, &data) != 0) return -1;
-	if(data & 1) return 1;
-	return 0;
+/* MPU6500 Interrupt Callback:
+ *
+ * Hook this into HAL_GPIO_EXTI_Callback() for the GPIO pin INT is connected to.
+ *
+ * Sets data_ready in the device context to 1.
+ *
+ * The code that handles reading data from the MPU6500 (after the interrupt)
+ * must handle setting data_ready back to 0.
+ *
+ * This function fails silently!!!
+ */
+inline void MPU6500_IntCallback(MPU6500_HandleTypeDef *dev) {
+	/*
+	uint8_t int_status = 0;
+	if(MPU6500_Read(dev, MPU6500_INT_STATUS, &int_status) == 0) {
+		if(int_status & 1) {
+			dev->data_ready = 1;
+		}
+	}
+	*/
+	dev->data_ready = 1;
 }
 
 /* Private Functions ---------------------------------------------------------*/

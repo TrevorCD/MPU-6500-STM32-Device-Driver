@@ -41,8 +41,8 @@ typedef struct {
 	
 	uint32_t initialized;
 
-	uint8_t data_ready;
-	
+	volatile uint8_t data_ready; /* set to 1 by IntCallback. Must be set back to
+									0 by whatever handles reading new data */
 } MPU6500_HandleTypeDef;
 
 /* Public Prototypes */
@@ -50,4 +50,4 @@ int MPU6500_Init(MPU6500_HandleTypeDef *dev);
 int MPU6500_GetAccel(MPU6500_HandleTypeDef *dev, MPU6500_OutputTypeDef *out);
 int MPU6500_GetGyro(MPU6500_HandleTypeDef *dev, MPU6500_OutputTypeDef *out);
 int MPU6500_GetTemp(MPU6500_HandleTypeDef *dev, MPU6500_OutputTypeDef *out);
-int MPU6500_DataReady(MPU6500_HandleTypeDef *dev);
+void MPU6500_IntCallback(MPU6500_HandleTypeDef * dev);
