@@ -31,6 +31,12 @@
 #define MPU6500_AD0_TIED_LOW       1      /* Tie low for lower slave address */
 #define MPU6500_READ_TIMEOUT       (1000) /* timeout for i2c read in ms */
 
+/* MPU-6500 Constants --------------------------------------------------------*/
+#define ROOM_TEMP_OFFSET           (0.0f) /* Set to 0 for this driver.
+											 Ideally, another sensor calculates
+											 this value */
+#define TEMP_SENSITIVITY           (333.87f)
+
 /* MPU-6500 Registers --------------------------------------------------------*/
 #define MPU6500_SELF_TEST_X_GYRO   (0x00)
 #define MPU6500_SELF_TEST_Y_GYRO   (0x01)
@@ -69,19 +75,6 @@
 											 SLV2              [2]
 											 SLV1              [1]
 											 SLV0              [0]    */
-#define MPU6500_I2C_MST_CTRL       (0x24) /* MULT_MST_EN       [7]
-											 WAIT_FOR_ES       [6]
-											 SLV3_FIFO_EN      [5]
-											 I2C_MST_P_NSR     [4]
-											 I2C_MST_CLK       [3:0]  */
-#define MPU6500_I2C_SLV0_ADDR      (0x25)
-#define MPU6500_I2C_SLV0_REG       (0x26)
-#define MPU6500_I2C_SLV0_CTRL      (0x27)
-#define MPU6500_I2C_SLV1_ADDR      (0x28)
-#define MPU6500_I2C_SLV1_REG       (0x29)
-#define MPU6500_I2C_SLV1_CTRL      (0x2A)
-/* ... more I2C addrs ...*/
-#define MPU6500_I2C_MST_STATUS     (0x36)
 #define MPU6500_INT_PIN_CFG        (0x27) /* ACTL              [7]
 											 OPEN              [6]
 											 LATCH_INT_EN      [5]
@@ -112,40 +105,6 @@
 #define MPU6500_GYRO_YOUT_L        (0x46)
 #define MPU6500_GYRO_ZOUT_H        (0x47)
 #define MPU6500_GYRO_ZOUT_L        (0x48)
-#define MPU6500_EXT_SENS_DATA_00   (0x49)
-#define MPU6500_EXT_SENS_DATA_01   (0x4A)
-#define MPU6500_EXT_SENS_DATA_02   (0x4B)
-#define MPU6500_EXT_SENS_DATA_03   (0x4C)
-#define MPU6500_EXT_SENS_DATA_04   (0x4D)
-#define MPU6500_EXT_SENS_DATA_05   (0x4E)
-#define MPU6500_EXT_SENS_DATA_06   (0x4F)
-#define MPU6500_EXT_SENS_DATA_07   (0x50)
-#define MPU6500_EXT_SENS_DATA_08   (0x51)
-#define MPU6500_EXT_SENS_DATA_09   (0x52)
-#define MPU6500_EXT_SENS_DATA_10   (0x53)
-#define MPU6500_EXT_SENS_DATA_11   (0x54)
-#define MPU6500_EXT_SENS_DATA_12   (0x55)
-#define MPU6500_EXT_SENS_DATA_13   (0x56)
-#define MPU6500_EXT_SENS_DATA_14   (0x57)
-#define MPU6500_EXT_SENS_DATA_15   (0x58)
-#define MPU6500_EXT_SENS_DATA_16   (0x59)
-#define MPU6500_EXT_SENS_DATA_17   (0x5A)
-#define MPU6500_EXT_SENS_DATA_18   (0x5B)
-#define MPU6500_EXT_SENS_DATA_19   (0x5C)
-#define MPU6500_EXT_SENS_DATA_20   (0x5D)
-#define MPU6500_EXT_SENS_DATA_21   (0x5E)
-#define MPU6500_EXT_SENS_DATA_22   (0x5F)
-#define MPU6500_EXT_SENS_DATA_23   (0x60)
-#define MPU6500_I2C_SLV0_DO        (0x63)
-#define MPU6500_I2C_SLV1_DO        (0x64)
-#define MPU6500_I2C_SLV2_DO        (0x65)
-#define MPU6500_I2C_SLV3_DO        (0x66)
-#define MPU6500_I2C_MST_DELAY_CTRL (0x67) /* DELAY_ES_SHADOW   [7]
-											 I2C_SLV4_DLY_EN   [4]
-											 I2C_SLV3_DLY_EN   [3]
-											 I2C_SLV2_DLY_EN   [2]
-											 I2C_SLV1_DLY_EN   [1]
-											 I2C_SLV0_DLY_EN   [0]    */
 #define MPU6500_SIGNAL_PATH_REST   (0x68) /* GYRO_RST          [2]
 											 ACCEL_RST         [1]
 											 TEMP_RST          [0]    */
@@ -258,6 +217,8 @@ int MPU6500_GetAccel(MPU6500_HandleTypeDef *dev, MPU6500_OutputTypeDef *out) {
 	out->accel_xout = x;
 	out->accel_yout = y;
 	out->accel_zout = z;
+
+	/// must do raw -> actual calculations for x y and z
 	
 	return 0;
 }
@@ -288,6 +249,8 @@ int MPU6500_GetGyro(MPU6500_HandleTypeDef *dev, MPU6500_OutputTypeDef *out) {
 	out->gyro_xout = x;
 	out->gyro_yout = y;
 	out->gyro_zout = z;
+
+	/// must do raw -> actual calculations for x y and z
 	
 	return 0;
 }
@@ -305,7 +268,11 @@ int MPU6500_GetTemp(MPU6500_HandleTypeDef *dev, MPU6500_OutputTypeDef *out) {
 	if(MPU6500_Read(dev, MPU6500_TEMP_OUT_H, &high) != 0) return -1;
 	if(MPU6500_Read(dev, MPU6500_TEMP_OUT_L, &low) != 0) return -1;
 
-	out->temp_out = ((uint16_t)low) | (((uint16_t)high) << 8);
+	uint16_t temp_raw = ((uint16_t)low) | (((uint16_t)high) << 8);
+
+	float temp_degC = ((temp_raw - ROOM_TEMP_OFFSET) / TEMP_SENSITIVITY) + 21;
+
+	dev->temp_out = temp_degC;
 	
 	return 0;
 }
