@@ -211,11 +211,10 @@ int MPU6500_Init(MPU6500_HandleTypeDef *dev) {
 	
 	/* driver state initialization */
 	dev->initialized = 1;
-	dev->gyro_fs_sel = 0; /* defaults to 0 */
+	dev->gyro_config = 0; /* defaults to 0 */
 	dev->accel_fs_sel = 0; /* defaults to 0 */
 	dev->sample_rate_div = 0; /* defaults to 0 */
 	dev->dlpf_cfg = 4; /* set to 4 above */
-	dev->fchoice_b = 0;
 	dev->pwr_mgmt_1 = 1; /* 0x01 on reset */
 	return 0;
 }
@@ -319,12 +318,15 @@ int MPU6500_SetAccelScale(MPU6500_HandleTypeDef *dev, uint8_t selection) {
 	if(dev->initialized != 1) return -1;
 
 	if(selection > 3) return -1; /* Options: 0, 1, 2, 3 */
-	
-	if(dev->accel_fs_sel == selection) return 0;
 
 	/* ACCEL_FS_SEL is ACCEL_CONFIG[4:3] */
-	if(MPU6500_Write(dev, MPU6500_ACCEL_CONFIG, selection << 3) != 0) return -1;
-
+	/* Clear bits [4:3] */
+	dev->accel_config &= ~0b11000;
+	/* Set bits [4:3] to selection */
+	dev->accel_config |= selection << 3;
+	if(MPU6500_Write(dev, MPU6500_ACCEL_CONFIG, dev->accel_config) != 0)
+		return -1;
+	
 	return 0;
 }
 
@@ -362,8 +364,7 @@ int MPU6500_GetAccel(MPU6500_HandleTypeDef *dev, MPU6500_OutputTypeDef *out) {
 
 /*----------------------------------------------------------------------------*/
 
-/* Sets the gyroscope's full scale.
-   Note: Sets the rest of GYRO_CONFIG register to 0
+/* Sets the gyroscope's scale.
 */
 int MPU6500_SetGyroScale(MPU6500_HandleTypeDef *dev, uint8_t selection) {
 
@@ -372,11 +373,14 @@ int MPU6500_SetGyroScale(MPU6500_HandleTypeDef *dev, uint8_t selection) {
 	
 	if(selection > 3) return -1; /* Options: 0, 1, 2, 3 */
 	
-	if(dev->gyro_fs_sel == selection) return 0;
-
     /* GYRO_FS_SEL is GYRO_CONFIG[4:3] */
-	if(MPU6500_Write(dev, MPU6500_GYRO_CONFIG, selection << 3) != 0) return -1;
-
+	/* Clear bits [4:3] */
+	dev->gyro_config &= ~0b11000;
+	/* Set bits [4:3] to selection */
+	dev->gyro_config |= selection << 3;
+	if(MPU6500_Write(dev, MPU6500_GYRO_CONFIG, dev->gyro_config) != 0)
+		return -1;
+	
 	return 0;
 }
 

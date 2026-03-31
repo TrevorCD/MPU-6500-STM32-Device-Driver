@@ -43,12 +43,10 @@ typedef struct {
 
 	volatile uint8_t data_ready; /* set to 1 by IntCallback. Must be set back to
 									0 by whatever handles reading new data. */
-	uint8_t gyro_fs_sel; /* Gyroscope full scale select. Update by writing to
-							GYRO_CONFIG register. */
-	uint8_t fchoice_b;       /* Filter bypass. Defaults to 0. */
+	uint8_t gyro_config; /* Contains test bits, fs select and filter bypass */
+
+	uint8_t accel_config;
 	
-	uint8_t accel_fs_sel; /* Accelerometer full scale select. Update by writing
-							 to ACCEL_CONFIG register */
 	uint8_t sample_rate_div; /* The value of SMPLRT_DIV. Defaults to 0.
 								Internal sample rate = 1kHz/(1+sample_rate_div)
 								when fchoice_b = 0b00 and 0 < dlpf_cfg < 7. */
