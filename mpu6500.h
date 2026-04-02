@@ -24,6 +24,9 @@
 #include "stm32f4xx.h"
 #include "stm32f4xx_hal.h"
 
+#ifndef MPU_H
+#define MPU_H
+
 typedef struct {
 	float accel_xout;
 	float accel_yout;
@@ -74,3 +77,5 @@ int  MPU6500_SetGyroScale(MPU6500_HandleTypeDef *dev, uint8_t selection);
 int  MPU6500_GetGyro(MPU6500_HandleTypeDef *dev, MPU6500_OutputTypeDef *out);
 
 int  MPU6500_GetTemp(MPU6500_HandleTypeDef *dev, MPU6500_OutputTypeDef *out);
+
+#endif
