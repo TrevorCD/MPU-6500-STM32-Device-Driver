@@ -156,13 +156,20 @@
 
 /* Public Prototypes ---------------------------------------------------------*/
 int  MPU6500_Init(MPU6500_HandleTypeDef *dev);
+int  MPU6500_EnableInterrupts(MPU6500_HandleTypeDef *dev);
+int  MPU6500_DisableInterrupts(MPU6500_HandleTypeDef *dev);
+void MPU6500_IntCallback(MPU6500_HandleTypeDef * dev);
+int  MPU6500_Awake(MPU6500_HandleTypeDef *dev);
+int  MPU6500_Sleep(MPU6500_HandleTypeDef *dev);
+int  MPU6500_TempDisable(MPU6500_HandleTypeDef *dev);
+int  MPU6500_TempEnable(MPU6500_HandleTypeDef *dev);
 int  MPU6500_SetSampleRateDiv(MPU6500_HandleTypeDef *dev, uint8_t div);
 int  MPU6500_SetAccelScale(MPU6500_HandleTypeDef *dev, uint8_t selection);
 int  MPU6500_GetAccel(MPU6500_HandleTypeDef *dev, MPU6500_OutputTypeDef *out);
 int  MPU6500_SetGyroScale(MPU6500_HandleTypeDef *dev, uint8_t selection);
 int  MPU6500_GetGyro(MPU6500_HandleTypeDef *dev, MPU6500_OutputTypeDef *out);
 int  MPU6500_GetTemp(MPU6500_HandleTypeDef *dev, MPU6500_OutputTypeDef *out);
-void MPU6500_IntCallback(MPU6500_HandleTypeDef * dev);
+
 
 /* Private Prototypes --------------------------------------------------------*/
 static int MPU6500_Read(MPU6500_HandleTypeDef *dev, uint8_t reg, uint8_t *data);
@@ -287,6 +294,24 @@ int MPU6500_Sleep(MPU6500_HandleTypeDef *dev) {
 	if(dev->initialized != 1) return -1;
 	/* Set sleep bit of PWR_MGMT_1 to 1 */
 	dev->pwr_mgmt_1 |= 0x40;
+	if(MPU6500_Write(dev, MPU6500_PWR_MGMT_1, dev->pwr_mgmt_1) != 0) return -1; 
+	return 0;
+}
+
+int MPU6500_TempDisable(MPU6500_HandleTypeDef *dev) {
+	if(dev == NULL) return -1;
+	if(dev->initialized != 1) return -1;
+	/* Set TEMP_DIS bit of power management register to 1 */
+	dev->pwr_mgmt_1 |= MPU6500_TEMP_DIS;
+	if(MPU6500_Write(dev, MPU6500_PWR_MGMT_1, dev->pwr_mgmt_1) != 0) return -1; 
+	return 0;
+}
+
+int MPU6500_TempEnable(MPU6500_HandleTypeDef *dev) {
+	if(dev == NULL) return -1;
+	if(dev->initialized != 1) return -1;
+	/* Set TEMP_DIS bit of power management register to 0  */
+	dev->pwr_mgmt_1 &- ~((uint8_t)MPU6500_PWR_MGMT_1);
 	if(MPU6500_Write(dev, MPU6500_PWR_MGMT_1, dev->pwr_mgmt_1) != 0) return -1; 
 	return 0;
 }
@@ -433,6 +458,9 @@ int MPU6500_GetTemp(MPU6500_HandleTypeDef *dev, MPU6500_OutputTypeDef *out) {
 	if(dev->initialized != 1) return -1;
 	if(out == NULL) return -1;
 
+	/* return -1 if temperature readings are disabled in power management reg */
+	if(dev->pwr_mgmt_1 & MPU6500_TEMP_DIS) return -1;
+	
 	if(MPU6500_Read(dev, MPU6500_TEMP_OUT_H, &high) != 0) return -1;
 	if(MPU6500_Read(dev, MPU6500_TEMP_OUT_L, &low) != 0) return -1;
 

@@ -67,6 +67,8 @@ void MPU6500_IntCallback(MPU6500_HandleTypeDef * dev);
 
 int  MPU6500_Awake(MPU6500_HandleTypeDef *dev);
 int  MPU6500_Sleep(MPU6500_HandleTypeDef *dev);
+int  MPU6500_TempDisable(MPU6500_HandleTypeDef *dev);
+int  MPU6500_TempDisable(MPU6500_HandleTypeDef *dev);
 
 int  MPU6500_SetSampleRateDiv(MPU6500_HandleTypeDef *dev, uint8_t div);
 
