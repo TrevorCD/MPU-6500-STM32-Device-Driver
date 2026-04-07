@@ -153,7 +153,6 @@
 #define MPU6500_SLAVE_ADDR         (0b1101001 << 1)
 #endif
 
-
 /* Public Prototypes ---------------------------------------------------------*/
 int  MPU6500_Init(MPU6500_HandleTypeDef *dev);
 int  MPU6500_EnableInterrupts(MPU6500_HandleTypeDef *dev);
@@ -170,14 +169,13 @@ int  MPU6500_SetGyroScale(MPU6500_HandleTypeDef *dev, uint8_t selection);
 int  MPU6500_GetGyro(MPU6500_HandleTypeDef *dev, MPU6500_OutputTypeDef *out);
 int  MPU6500_GetTemp(MPU6500_HandleTypeDef *dev, MPU6500_OutputTypeDef *out);
 
-
 /* Private Prototypes --------------------------------------------------------*/
 static int MPU6500_Read(MPU6500_HandleTypeDef *dev, uint8_t reg, uint8_t *data);
 static int MPU6500_Write(MPU6500_HandleTypeDef *dev, uint8_t reg, uint8_t data);
 
 /* Public Functions ----------------------------------------------------------*/
 
-/* MPU-6500 Initialization
+/* MPU-6500 Initialize:
  *
  * Prerequisites:
  * - dev must be allocated and zeroed
@@ -232,6 +230,10 @@ int MPU6500_Init(MPU6500_HandleTypeDef *dev) {
 
 /* Interrupt Management and Callback -----------------------------------------*/
 
+/* MPU6500 Enable Interrupts:
+ *
+ * Enables raw data ready interrupts
+ */
 int MPU6500_EnableInterrupts(MPU6500_HandleTypeDef *dev) {
 	if(dev == NULL) return -1;
 	if(dev->initialized != 1) return -1;
@@ -240,6 +242,10 @@ int MPU6500_EnableInterrupts(MPU6500_HandleTypeDef *dev) {
 	return 0;
 }
 
+/* MPU6500 Disable Interrupts:
+ *
+ * Disables all interrupts from the MPU6500
+ */
 int MPU6500_DisableInterrupts(MPU6500_HandleTypeDef *dev) {
 	if(dev == NULL) return -1;
 	if(dev->initialized != 1) return -1;
@@ -280,6 +286,10 @@ inline void MPU6500_IntCallback(MPU6500_HandleTypeDef *dev) {
 
 /* Power Management ----------------------------------------------------------*/
 
+/* MPU6500 Awake:
+ *
+ * Sets the power management mode to awake
+ */
 int MPU6500_Awake(MPU6500_HandleTypeDef *dev) {
 	if(dev == NULL) return -1;
 	if(dev->initialized != 1) return -1;
@@ -289,6 +299,10 @@ int MPU6500_Awake(MPU6500_HandleTypeDef *dev) {
 	return 0;
 }
 
+/* MPU6500 Sleep:
+ *
+ * Sets the power management mode to sleep
+ */
 int MPU6500_Sleep(MPU6500_HandleTypeDef *dev) {
 	if(dev == NULL) return -1;
 	if(dev->initialized != 1) return -1;
@@ -298,6 +312,10 @@ int MPU6500_Sleep(MPU6500_HandleTypeDef *dev) {
 	return 0;
 }
 
+/* MPU6500 Temperature Disable:
+ *
+ * Disables the temperature sensor by writing to the PWR_MGMT_1 register
+ */
 int MPU6500_TempDisable(MPU6500_HandleTypeDef *dev) {
 	if(dev == NULL) return -1;
 	if(dev->initialized != 1) return -1;
@@ -307,6 +325,10 @@ int MPU6500_TempDisable(MPU6500_HandleTypeDef *dev) {
 	return 0;
 }
 
+/* MPU6500 Temperature Enables:
+ *
+ * Enables the temperature sensor by writing to the PWR_MGMT_1 register
+ */
 int MPU6500_TempEnable(MPU6500_HandleTypeDef *dev) {
 	if(dev == NULL) return -1;
 	if(dev->initialized != 1) return -1;
@@ -318,7 +340,9 @@ int MPU6500_TempEnable(MPU6500_HandleTypeDef *dev) {
 
 /*----------------------------------------------------------------------------*/
 
-/* Sets the sample rate where sample rate = 1kHz / ( 1 + div )
+/* MPU6500 Set Sample Rate Divider:
+ *
+ * Sets the sample rate where sample rate = 1kHz / ( 1 + div )
  * This is only effective when FCHOICE_B = 0b00 and 0 < DLPF_CFG < 7
  */
 int MPU6500_SetSampleRateDiv(MPU6500_HandleTypeDef *dev, uint8_t div) {
@@ -395,8 +419,6 @@ int MPU6500_GetAccel(MPU6500_HandleTypeDef *dev, MPU6500_OutputTypeDef *out) {
 
 /* Gyroscope Functions -------------------------------------------------------*/
 
-/* Sets the gyroscope's scale.
-*/
 int MPU6500_SetGyroScale(MPU6500_HandleTypeDef *dev, uint8_t selection) {
 
 	if(dev == NULL) return -1;
@@ -450,6 +472,19 @@ int MPU6500_GetGyro(MPU6500_HandleTypeDef *dev, MPU6500_OutputTypeDef *out) {
 
 /* Temperature Functions -----------------------------------------------------*/
 
+/* MPU6500 Get Temperature:
+ *
+ * Sets the temp_out field out to the device temperature in degrees celsius.
+ *
+ * Returns 0 on success, -1 on failure.
+ *
+ * Fails if:
+ *   - dev is NULL
+ *   - dev is not initialized
+ *   - out is NULL
+ *   - temperature sensor is disabled
+ *   - I2C communication fails
+ */
 int MPU6500_GetTemp(MPU6500_HandleTypeDef *dev, MPU6500_OutputTypeDef *out) {
 
 	uint8_t high, low;
@@ -475,6 +510,7 @@ int MPU6500_GetTemp(MPU6500_HandleTypeDef *dev, MPU6500_OutputTypeDef *out) {
 
 /* Private Functions ---------------------------------------------------------*/
 
+/* Wrapper for HAL_I2C_Mem_Read */
 static int MPU6500_Read(MPU6500_HandleTypeDef *dev, uint8_t reg, uint8_t *data){
 	HAL_StatusTypeDef status;
 	if(data == NULL) return -1;
@@ -484,6 +520,7 @@ static int MPU6500_Read(MPU6500_HandleTypeDef *dev, uint8_t reg, uint8_t *data){
 	return 0;
 }
 
+/* Wrapper for HAL_I2C_Master_Transmit */
 static int MPU6500_Write(MPU6500_HandleTypeDef *dev, uint8_t reg, uint8_t data){
 	HAL_StatusTypeDef status;
 	uint8_t msg[2] = {reg, data};
