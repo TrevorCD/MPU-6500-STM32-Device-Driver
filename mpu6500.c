@@ -333,7 +333,7 @@ int MPU6500_TempEnable(MPU6500_HandleTypeDef *dev) {
 	if(dev == NULL) return -1;
 	if(dev->initialized != 1) return -1;
 	/* Set TEMP_DIS bit of power management register to 0  */
-	dev->pwr_mgmt_1 &- ~((uint8_t)MPU6500_PWR_MGMT_1);
+	dev->pwr_mgmt_1 &= ~((uint8_t)MPU6500_PWR_MGMT_1);
 	if(MPU6500_Write(dev, MPU6500_PWR_MGMT_1, dev->pwr_mgmt_1) != 0) return -1; 
 	return 0;
 }
