@@ -237,7 +237,7 @@ int MPU6500_EnableInterrupts(MPU6500_handle_t *dev) {
 	if(dev == NULL) return -1;
 	if(dev->initialized != 1) return -1;
 	/* Enable raw data ready interrupts (MPU6500_INT_ENABLE[bit 0] == 1) */
-	if(MPU6500_Write_I2C(dev, MPU6500_INT_ENABLE, 1) != 0) return -1;
+	if(dev->comm_ops.write(dev, MPU6500_INT_ENABLE, 1) != 0) return -1;
 	return 0;
 }
 
@@ -249,7 +249,7 @@ int MPU6500_DisableInterrupts(MPU6500_handle_t *dev) {
 	if(dev == NULL) return -1;
 	if(dev->initialized != 1) return -1;
 	/* Disable all interrupts */
-	if(MPU6500_Write_I2C(dev, MPU6500_INT_ENABLE, 0) != 0) return -1;
+	if(dev->comm_ops.write(dev, MPU6500_INT_ENABLE, 0) != 0) return -1;
 	return 0;
 }
 
@@ -294,7 +294,7 @@ int MPU6500_Awake(MPU6500_handle_t *dev) {
 	if(dev->initialized != 1) return -1;
 	/* Set sleep bit and cycle bit of PWR_MGMT_1 to 0 */
 	dev->pwr_mgmt_1 &= ~(MPU6500_SLEEP | MPU6500_CYCLE);
-	if(MPU6500_Write_I2C(dev, MPU6500_PWR_MGMT_1, dev->pwr_mgmt_1) != 0) {
+	if(dev->comm_ops.write(dev, MPU6500_PWR_MGMT_1, dev->pwr_mgmt_1) != 0) {
 		return -1;
 	}
 	return 0;
@@ -309,7 +309,7 @@ int MPU6500_Sleep(MPU6500_handle_t *dev) {
 	if(dev->initialized != 1) return -1;
 	/* Set sleep bit of PWR_MGMT_1 to 1 */
 	dev->pwr_mgmt_1 |= 0x40;
-	if(MPU6500_Write_I2C(dev, MPU6500_PWR_MGMT_1, dev->pwr_mgmt_1) != 0) {
+	if(dev->comm_ops.write(dev, MPU6500_PWR_MGMT_1, dev->pwr_mgmt_1) != 0) {
 		return -1;
 	}
 	return 0;
@@ -324,7 +324,7 @@ int MPU6500_TempDisable(MPU6500_handle_t *dev) {
 	if(dev->initialized != 1) return -1;
 	/* Set TEMP_DIS bit of power management register to 1 */
 	dev->pwr_mgmt_1 |= MPU6500_TEMP_DIS;
-	if(MPU6500_Write_I2C(dev, MPU6500_PWR_MGMT_1, dev->pwr_mgmt_1) != 0) {
+	if(dev->comm_ops.write(dev, MPU6500_PWR_MGMT_1, dev->pwr_mgmt_1) != 0) {
 		return -1;
 	}
 	return 0;
@@ -339,7 +339,7 @@ int MPU6500_TempEnable(MPU6500_handle_t *dev) {
 	if(dev->initialized != 1) return -1;
 	/* Set TEMP_DIS bit of power management register to 0  */
 	dev->pwr_mgmt_1 &= ~((uint8_t)MPU6500_PWR_MGMT_1);
-	if(MPU6500_Write_I2C(dev, MPU6500_PWR_MGMT_1, dev->pwr_mgmt_1) != 0) {
+	if(dev->comm_ops.write(dev, MPU6500_PWR_MGMT_1, dev->pwr_mgmt_1) != 0) {
 		return -1;
 	}
 	return 0;
@@ -365,7 +365,7 @@ int MPU6500_SetSampleRateDiv(MPU6500_handle_t *dev, uint8_t div) {
 
 	if(dev->sample_rate_div == div) return 0;
 
-	if(MPU6500_Write_I2C(dev, MPU6500_SMPLRT_DIV, div) != 0) return -1;
+	if(dev->comm_ops.write(dev, MPU6500_SMPLRT_DIV, div) != 0) return -1;
 
 	dev->sample_rate_div = div;
 	return 0;
@@ -385,7 +385,7 @@ int MPU6500_SetAccelScale(MPU6500_handle_t *dev, uint8_t selection) {
 	dev->accel_config &= ~0b11000;
 	/* Set bits [4:3] to selection */
 	dev->accel_config |= selection << 3;
-	if(MPU6500_Write_I2C(dev, MPU6500_ACCEL_CONFIG, dev->accel_config) != 0)
+	if(dev->comm_ops.write(dev, MPU6500_ACCEL_CONFIG, dev->accel_config) != 0)
 		return -1;
 	
 	return 0;
@@ -438,7 +438,7 @@ int MPU6500_SetGyroScale(MPU6500_handle_t *dev, uint8_t selection) {
 	dev->gyro_config &= ~0b11000;
 	/* Set bits [4:3] to selection */
 	dev->gyro_config |= selection << 3;
-	if(MPU6500_Write_I2C(dev, MPU6500_GYRO_CONFIG, dev->gyro_config) != 0)
+	if(dev->comm_ops.write(dev, MPU6500_GYRO_CONFIG, dev->gyro_config) != 0)
 		return -1;
 	
 	return 0;
@@ -529,7 +529,7 @@ static int MPU6500_Init(MPU6500_handle_t *dev) {
 	}
 	
 	/* Device reset */
-	if(MPU6500_Write_I2C(dev, MPU6500_PWR_MGMT_1, MPU6500_DEVICE_RESET) != 0) {
+	if(dev->comm_ops.write(dev, MPU6500_PWR_MGMT_1, MPU6500_DEVICE_RESET) != 0) {
 		return -1;
 	}
 
@@ -538,7 +538,7 @@ static int MPU6500_Init(MPU6500_handle_t *dev) {
 	
 	/* Set DLPF_CFG to 4. This sets internal sample rate to 1kHz, with a 9.9ms
 	   delay. This is a medium digital low pass filter. */
-	if(MPU6500_Write_I2C(dev, MPU6500_CONFIG, 4) != 0) return -1;
+	if(dev->comm_ops.write(dev, MPU6500_CONFIG, 4) != 0) return -1;
 	HAL_Delay(10);
 	
 	/* driver state initialization */
@@ -552,7 +552,8 @@ static int MPU6500_Init(MPU6500_handle_t *dev) {
 	return 0;
 }
 
-/* Wrapper for HAL_I2C_Mem_Read */
+/* Wrapper for HAL_I2C_Mem_Read.
+   Called via MPU6500_handle_t.MPU6500_comm_ops.read */
 static int MPU6500_Read_I2C(MPU6500_handle_t *dev, uint8_t reg, uint8_t *data) {
 	HAL_StatusTypeDef status;
 	status = HAL_I2C_Mem_Read(dev->hi2c, dev->addr, reg, 1, data, 1,
@@ -561,7 +562,8 @@ static int MPU6500_Read_I2C(MPU6500_handle_t *dev, uint8_t reg, uint8_t *data) {
 	return 0;
 }
 
-/* Wrapper for HAL_I2C_Master_Transmit */
+/* Wrapper for HAL_I2C_Master_Transmit.
+   Called via MPU6500_handle_t.MPU6500_comm_ops.write*/
 static int MPU6500_Write_I2C(MPU6500_handle_t *dev, uint8_t reg, uint8_t data) {
 	HAL_StatusTypeDef status;
 	uint8_t msg[2] = {reg, data};
