@@ -8,11 +8,11 @@ This driver can either use SPI or I2C communication. On driver initialization,
 use either the MPU6500_Init_SPI or MPU6500_Init_I2C function to select the
 communication protocol.
 
-### Compilation
 
-- Add mpu6500.c to C_SOURCES in the stm32 makefile, and add a -I[path to mpu6500.h] as a flag.
 
 ### Integration
+
+- Add mpu6500.c to C_SOURCES in the stm32 makefile, and add a -I[path to mpu6500.h] as a flag.
 
 - Enable interrupts on whichever line is connected to the MPU6500's INT pin.
 
