@@ -38,47 +38,53 @@ typedef enum {
 	MPU6500_ADDR_HIGH = 0b11010010,
 } MPU6500_addr_t;
 
-/* Forward definition of handle so that MPU6500_comm_t can reference it */
+/* Forward definition of handle so that MPU6500_comm_ops_t can reference it */
 typedef struct MPU6500_handle_t MPU6500_handle_t;
 
 /* Communication operation abstraction. Function pointers are assigned to
    specific protocol logic, SPI or I2C, in MPU6500_Init. */
-typedef struct {
+typedef struct MPU6500_comm_ops_t {
 	int (*read)(MPU6500_handle_t *dev, uint8_t reg, uint8_t *data);
 	int (*write)(MPU6500_handle_t *dev, uint8_t reg, uint8_t data);
 } MPU6500_comm_ops_t;
 
 /* Device context/handle */
 struct MPU6500_handle_t {
-	
-	MPU6500_comm_ops_t comm_ops; /* Function pointers to read and write
-									functions. Set to either I2C or SPI funcs*/
+	/* Function pointers to read and write functions. Either I2C or SPI funcs */
+	MPU6500_comm_ops_t comm_ops;
 	
     /* Communication handle union. Ensures mutual exclusivity of protocol. */
 	union {
 		I2C_HandleTypeDef *hi2c;
 		SPI_HandleTypeDef *hspi;
 	};
-	
-	MPU6500_addr_t addr; /* Device address. Only used in I2C mode */
-	
-	uint8_t initialized; /* Set to 1 in MPU6500_Init */
 
-	volatile uint8_t data_ready; /* set to 1 by IntCallback. Must be set back to
-									0 by whatever handles reading new data. */
-	
-	uint8_t gyro_config; /* Contains test bits, fs select and filter bypass */
+	/* SPI mode specific fields for chip select pin */
+	GPIO_TypeDef *cs_port;
+	uint16_t cs_pin;
 
+	/* Device address. Only used in I2C mode */
+	MPU6500_addr_t addr;
+	
+	/* Configs contain sensor specific test bits, fs select and filter bypass */
+	uint8_t gyro_config;
 	uint8_t accel_config;
+
+	/* Internal sample rate = 1kHz/(1+sample_rate_div) when fchoice_b = 0b00
+	   and 0 < dlpf_cfg < 7. Defaults to 0. */
+	uint8_t sample_rate_div;
+
+	/* Digital low pass filter config. Initialized to 4. */
+	uint8_t dlpf_cfg;
+
+	/* Set to 0x01 (Awake, PLL) on reset */
+	uint8_t pwr_mgmt_1;
 	
-	uint8_t sample_rate_div; /* The value of SMPLRT_DIV. Defaults to 0.
-								Internal sample rate = 1kHz/(1+sample_rate_div)
-								when fchoice_b = 0b00 and 0 < dlpf_cfg < 7. */
+	uint8_t initialized;
 	
-	uint8_t dlpf_cfg;        /* Digital low pass filter config.
-								Initialized to 4. */
-	
-	uint8_t pwr_mgmt_1; /* 0x01 (Awake, PLL) on reset */
+	/* set to 1 by IntCallback, when data raw ready interrupt fires. Must be
+	   set back to 0 by the code that handles reading new data. */
+	volatile uint8_t data_ready;
 };
 
 /* MPU6500 Output. Fields set by MPU6500_Get... functions */
@@ -98,10 +104,10 @@ typedef struct MPU6500_output_t {
  *
  * Prerequisites:
  * - dev must be allocated and zeroed
- * - hi2c field must be set
+ * - hi2c field must be initialized
  *
  * Initializes device context, checks if device responds, checks if device is a
- * BME-6000, and resets device.
+ * BME-6500, and resets device.
  *
  * Note: On init, device is awake, using PLL, does not generate interrupts, has
  *       a sample rate of 1kHz, and the digital low pass filter set to 4.
@@ -109,7 +115,8 @@ typedef struct MPU6500_output_t {
 int MPU6500_Init_I2C(MPU6500_handle_t *dev, I2C_HandleTypeDef *hi2c,
 					 MPU6500_addr_t addr);
 
-int MPU6500_Init_SPI(MPU6500_handle_t *dev, SPI_HandleTypeDef *hspi);
+int MPU6500_Init_SPI(MPU6500_handle_t *dev, SPI_HandleTypeDef *hspi,
+					 GPIO_TypeDef *cs_port, uint16_t cs_pin);
 
 /* MPU6500 Enable Interrupts:
  *

@@ -102,7 +102,7 @@
 #define MPU6500_GYRO_YOUT_L         (0x46)
 #define MPU6500_GYRO_ZOUT_H         (0x47)
 #define MPU6500_GYRO_ZOUT_L         (0x48)
-#define MPU6500_SIGNAL_PATH_REST    (0x68) /* GYRO_RST          [2]
+#define MPU6500_SIGNAL_PATH_RESET   (0x68) /* GYRO_RST          [2]
 											  ACCEL_RST         [1]
 											  TEMP_RST          [0]    */
 #define MPU6500_ACCEL_INTEL_CTRL    (0x69) /* ACCEL_INT_EL_EN   [7]
@@ -147,9 +147,10 @@
 #define MPU6500_ZA_OFFSET_L         (0x7E)
 
 /* Public Prototypes ---------------------------------------------------------*/
-int MPU6500_Init_I2C(MPU6500_handle_t *dev, I2C_HandleTypeDef *hi2c,
-					 MPU6500_addr_t addr);
-int  MPU6500_Init_SPI(MPU6500_handle_t *dev, SPI_HandleTypeDef *hspi);
+int  MPU6500_Init_I2C(MPU6500_handle_t *dev, I2C_HandleTypeDef *hi2c,
+					  MPU6500_addr_t addr);
+int  MPU6500_Init_SPI(MPU6500_handle_t *dev, SPI_HandleTypeDef *hspi,
+					  GPIO_TypeDef *cs_port, uint16_t cs_pin);
 int  MPU6500_EnableInterrupts(MPU6500_handle_t *dev);
 int  MPU6500_DisableInterrupts(MPU6500_handle_t *dev);
 void MPU6500_IntCallback(MPU6500_handle_t * dev);
@@ -180,16 +181,13 @@ static int MPU6500_Write_SPI(MPU6500_handle_t *dev, uint8_t reg, uint8_t data);
  * - hi2c field must be set
  *
  * Initializes device context, checks if device responds, checks if device is a
- * BME-6000, and resets device.
+ * BME-6500, and resets device.
  *
  * Note: On init, device is awake, using PLL, does not generate interrupts, has
  *       a sample rate of 1kHz, and the digital low pass filter set to 4.
  */
 int MPU6500_Init_I2C(MPU6500_handle_t *dev, I2C_HandleTypeDef *hi2c,
 					 MPU6500_addr_t addr) {
-
-	HAL_StatusTypeDef status;
-
 	/* Validate arguments */
 	if(dev == NULL) return -1;
 	if(dev->initialized != 0) return -1;
@@ -198,20 +196,23 @@ int MPU6500_Init_I2C(MPU6500_handle_t *dev, I2C_HandleTypeDef *hi2c,
 	
 	/* Set communication fields in dev context */
 	dev->hi2c = hi2c;
-	dev->addr = addr;
 	dev->comm_ops.write = MPU6500_Write_I2C;
 	dev->comm_ops.read = MPU6500_Read_I2C;
 
+	/* Set protocol specific fields */
+	dev->addr = addr;
+	
 	/* Check for ACK from device */
-	status = HAL_I2C_IsDeviceReady(dev->hi2c, addr, 10, MPU6500_TIMEOUT);
-	if(status != HAL_OK) return -1;
+	if(HAL_I2C_IsDeviceReady(dev->hi2c, addr, 10, MPU6500_TIMEOUT) != HAL_OK) {
+		return -1;
+	}
 
 	/* Finish initialization */
 	return MPU6500_Init(dev);
 }
 
-int MPU6500_Init_SPI(MPU6500_handle_t *dev, SPI_HandleTypeDef *hspi) {
-	
+int MPU6500_Init_SPI(MPU6500_handle_t *dev, SPI_HandleTypeDef *hspi,
+					 GPIO_TypeDef *cs_port, uint16_t cs_pin) {
 	/* Validate arguments */
 	if(dev == NULL) return -1;
 	if(dev->initialized != 0) return -1;
@@ -219,10 +220,16 @@ int MPU6500_Init_SPI(MPU6500_handle_t *dev, SPI_HandleTypeDef *hspi) {
 	
 	/* Set communication fields in dev context */
 	dev->hspi = hspi;
-	/* device address is 0 on SPI mode */
 	dev->comm_ops.write = MPU6500_Write_SPI;
 	dev->comm_ops.read = MPU6500_Read_SPI;
 
+	/* Set protocol specific fields */
+	dev->cs_port = cs_port;
+	dev->cs_pin = cs_pin;
+
+	/* Set CS line high (inactive) for SPI transactions */
+	HAL_GPIO_WritePin(dev->cs_port, dev->cs_pin, GPIO_PIN_SET);
+	
 	/* Finish initialization */
 	return MPU6500_Init(dev);
 }
@@ -272,13 +279,8 @@ inline void MPU6500_IntCallback(MPU6500_handle_t *dev) {
 	/* Interrupt is cleared when INT_STATUS register is read */
 	/* If INT_PIN_CFG[4] (INT_ANYRD_2CLEAR) is 1, any read clears interrupt */
 	if(dev->comm_ops.read(dev, MPU6500_INT_STATUS, &int_status) == 0) {
-		/// this switch statement may be a bad idea if multiple bits can be on
-		switch(int_status) {
-		case 1:
+		if(int_status & 1) {
 			dev->data_ready = 1;
-			break;
-		default:
-			break;
 		}
 	}
 }
@@ -529,12 +531,21 @@ static int MPU6500_Init(MPU6500_handle_t *dev) {
 	}
 	
 	/* Device reset */
-	if(dev->comm_ops.write(dev, MPU6500_PWR_MGMT_1, MPU6500_DEVICE_RESET) != 0) {
+	if(dev->comm_ops.write(dev, MPU6500_PWR_MGMT_1, MPU6500_DEVICE_RESET) != 0){
 		return -1;
 	}
 
 	/* Give the device some time... */
 	HAL_Delay(100);
+
+	/* addr is 0 when driver is in SPI mode.
+	   Datasheet says to use SIGNAL_PATH_RESET when resetting in SPI mode */
+	if(dev->addr == 0) {
+		if(dev->comm_ops.write(dev, MPU6500_SIGNAL_PATH_RESET, 0b111) != 0) {
+			return -1;
+		}
+		HAL_Delay(100);
+	}
 	
 	/* Set DLPF_CFG to 4. This sets internal sample rate to 1kHz, with a 9.9ms
 	   delay. This is a medium digital low pass filter. */
@@ -563,7 +574,7 @@ static int MPU6500_Read_I2C(MPU6500_handle_t *dev, uint8_t reg, uint8_t *data) {
 }
 
 /* Wrapper for HAL_I2C_Master_Transmit.
-   Called via MPU6500_handle_t.MPU6500_comm_ops.write*/
+   Called via MPU6500_handle_t.MPU6500_comm_ops.write */
 static int MPU6500_Write_I2C(MPU6500_handle_t *dev, uint8_t reg, uint8_t data) {
 	HAL_StatusTypeDef status;
 	uint8_t msg[2] = {reg, data};
@@ -572,11 +583,32 @@ static int MPU6500_Write_I2C(MPU6500_handle_t *dev, uint8_t reg, uint8_t data) {
 	return 0;
 }
 
-static int MPU6500_Read_SPI(MPU6500_handle_t *dev, uint8_t reg, uint8_t *data) {
-	/// not yet implemented
-	return -1;
-}
+/* Wrapper for HAL_SPI_Transmit.
+   Called via MPU6500_handle_t.MPU6500_comm_ops.write */
 static int MPU6500_Write_SPI(MPU6500_handle_t *dev, uint8_t reg, uint8_t data) {
-	/// not yet implemented
-	return -1;
+    HAL_StatusTypeDef status;
+    uint8_t msg[2] = { reg & 0x7F, data };  /* MSB clear = write */
+
+    HAL_GPIO_WritePin(dev->cs_port, dev->cs_pin, GPIO_PIN_RESET);
+    status = HAL_SPI_Transmit(dev->hspi, msg, 2, MPU6500_TIMEOUT);
+    HAL_GPIO_WritePin(dev->cs_port, dev->cs_pin, GPIO_PIN_SET);
+
+    if(status != HAL_OK) return -1;
+    return 0;
+}
+
+/* Wrapper for HAL_SPI_TransmitReceive.
+   Called via MPU6500_handle_t.MPU6500_comm_ops.read */
+static int MPU6500_Read_SPI(MPU6500_handle_t *dev, uint8_t reg, uint8_t *data) {
+    HAL_StatusTypeDef status;
+    uint8_t tx[2] = { reg | 0x80, 0x00 };  /* MSB set = read */
+    uint8_t rx[2] = { 0x00, 0x00 };
+
+    HAL_GPIO_WritePin(dev->cs_port, dev->cs_pin, GPIO_PIN_RESET);
+    status = HAL_SPI_TransmitReceive(dev->hspi, tx, rx, 2, MPU6500_TIMEOUT);
+    HAL_GPIO_WritePin(dev->cs_port, dev->cs_pin, GPIO_PIN_SET);
+
+    if(status != HAL_OK) return -1;
+    *data = rx[1];  /* rx[0] is a dummy byte clocked out during address phase */
+    return 0;
 }
